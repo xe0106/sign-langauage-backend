@@ -1,4 +1,4 @@
-package sign.language.server;
+package sign.language;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

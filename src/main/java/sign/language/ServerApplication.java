@@ -1,4 +1,4 @@
-package sign.language.server;
+package sign.language;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -2,9 +2,10 @@ package sign.language.controller;
 
 import org.springframework.web.bind.annotation.*;
 import sign.language.domain.User;
+import sign.language.request.SignInRequest;
+import sign.language.request.SignUpRequest;
 import sign.language.response.SignResponse;
 import sign.language.service.SignService;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/sign/language/auth")
@@ -16,33 +17,39 @@ public class SignController {
         this.signService = signService;
     }
 
-    @PostMapping("/signin")
-    public SignResponse signIn(@RequestBody Map<String, String> request) {
-        String id = request.get("id");
-        String password = request.get("password");
-
-        String token = signService.signIn(id, password);
-
-        if (token != null) {
-            User user = signService.findById(id);
-            return new SignResponse(true, "로그인 성공!", user.getName(), token);
+    // 닉네임 중복 확인 API
+    @GetMapping("/check-nickname")
+    public SignResponse checkNickname(@RequestParam String nickname) {
+        boolean available = signService.checkNicknameAvailable(nickname);
+        if (available) {
+            return new SignResponse(true, "사용 가능한 닉네임입니다.", true);
         } else {
-            return new SignResponse(false, "아이디 또는 비밀번호가 잘못되었습니다.");
+            return new SignResponse(false, "이미 사용 중인 닉네임입니다.", false);
         }
     }
 
+    // 회원가입 API
     @PostMapping("/signup")
-    public SignResponse signUp(@RequestBody Map<String, String> request) {
-        String id = request.get("id");
-        String password = request.get("password");
-        String name = request.get("name");
-
-        boolean success = signService.signUp(id, password, name);
+    public SignResponse signUp(@RequestBody SignUpRequest request) {
+        boolean success = signService.signUp(request);
 
         if (success) {
-            return new SignResponse(true, "회원가입이 완료되었습니다.", name);
+            return new SignResponse(true, "회원가입이 완료되었습니다.", request.getName());
         } else {
-            return new SignResponse(false, "이미 가입된 아이디입니다.");
+            return new SignResponse(false, "이미 가입된 이메일입니다.");
+        }
+    }
+
+    // 로그인 API
+    @PostMapping("/signin")
+    public SignResponse signIn(@RequestBody SignInRequest request) {
+        String token = signService.signIn(request.getEmail(), request.getPassword());
+
+        if (token != null) {
+            User user = signService.findByEmail(request.getEmail());
+            return new SignResponse(true, "로그인 성공!", user.getName(), token);
+        } else {
+            return new SignResponse(false, "이메일 또는 비밀번호가 잘못되었습니다.");
         }
     }
 }

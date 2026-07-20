@@ -18,13 +18,17 @@ repositories {
 }
 
 dependencies {
-	// 기존의 기본 스타터를 web 스타터로 변경해 줍니다! (이게 있어야 컨트롤러를 쓸 수 있습니다)
+	// 기존의 기본 스타터를 web 스타터로 변경
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	runtimeOnly 'com.mysql:mysql-connector-j'
 
-	// 🔐 패스워드 암호화를 위해 스프링 시큐리티 크립토 추가
+	// 패스워드 암호화를 위해 스프링 시큐리티 크립토 추가
 	implementation 'org.springframework.security:spring-security-crypto'
 
-	// 🔑 JWT (JSON Web Token) 라이브러리 추가
+	// DB 암호화 모듈
+	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5'
+
+	// JWT (JSON Web Token) 라이브러리 추가
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
@@ -36,6 +40,11 @@ dependencies {
 	// 테스트 라이브러리 (이대로 유지)
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// JPA
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5'
+
 }
 
 tasks.named('test') {

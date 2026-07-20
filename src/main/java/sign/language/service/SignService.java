@@ -2,58 +2,71 @@ package sign.language.service;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import sign.language.domain.User;
+import sign.language.request.SignUpRequest;
+import sign.language.repository.UserRepository;
 import sign.language.util.JwtTokenProvider;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Instant;
 
 @Service
 public class SignService {
 
-    private final List<User> userList = new ArrayList<>();
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(); // 🔐 암호화 도구
-    private final JwtTokenProvider jwtTokenProvider; // 🔑 토큰 공급 도구
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final JwtTokenProvider jwtTokenProvider;
 
-    // 더미 데이터
-    public SignService(JwtTokenProvider jwtTokenProvider) {
+    public SignService(UserRepository userRepository, JwtTokenProvider jwtTokenProvider) {
+        this.userRepository = userRepository;
         this.jwtTokenProvider = jwtTokenProvider;
-        userList.add(new User("testId", passwordEncoder.encode("password123"), "홍길동"));
     }
 
-    // 회원가입 로직
-    public boolean signUp(String id, String password, String name) {
-        // ID 중복 검사
-        for (User user : userList) {
-            if (user.getId().equals(id)) {
-                return false;
-            }
+    // 닉네임 중복 확인
+    @Transactional(readOnly = true)
+    public boolean checkNicknameAvailable(String nickname) {
+        return !userRepository.existsByNickname(nickname);
+    }
+
+    // 회원가입
+    @Transactional
+    public boolean signUp(SignUpRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            return false; // 이미 가입된 이메일
         }
-        // 비밀번호 암호화
-        String encryptedPassword = passwordEncoder.encode(password);
-        userList.add(new User(id, encryptedPassword, name));
+
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword())); // 비밀번호 암호화
+        user.setName(request.getName());
+        user.setNickname(request.getNickname());
+        user.setGender(request.getGender());
+        user.setBirthDate(request.getBirthDate());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setLearningDays(0);
+        user.setNotificationEnabled(true);
+        user.setCreatedAt(Instant.now());
+        user.setUpdatedAt(Instant.now());
+
+        userRepository.save(user);
         return true;
     }
 
-    // 토큰 발행 성공 시 토큰값 반환, 실패 시 null 반환
-    public String signIn(String id, String password) {
-        for (User user : userList) {
-            if (user.getId().equals(id)) {
-                // 입력된 평문 비밀번호와 암호화되어 저장된 비밀번호 대조
-                if (passwordEncoder.matches(password, user.getPassword())) {
-                    // 로그인 성공 시 JWT 토큰을 발행
-                    return jwtTokenProvider.createToken(id);
-                }
-            }
+    // 로그인 (JWT 토큰 리턴)
+    @Transactional(readOnly = true)
+    public String signIn(String email, String password) {
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user != null && passwordEncoder.matches(password, user.getPasswordHash())) {
+            // 로그인 성공 시 JWT 토큰 생성 (Email 기준)
+            return jwtTokenProvider.createToken(user.getEmail());
         }
         return null; // 로그인 실패
     }
 
-    // ID로 유저 정보 조회 (추후 로그인 유지 확인 목적)
-    public User findById(String id) {
-        return userList.stream()
-                .filter(u -> u.getId().equals(id))
-                .findFirst()
-                .orElse(null);
+    // 이메일로 유저 정보 조회
+    @Transactional(readOnly = true)
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
     }
 }

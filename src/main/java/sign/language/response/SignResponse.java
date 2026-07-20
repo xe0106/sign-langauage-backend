@@ -1,12 +1,16 @@
 package sign.language.response;
 
+import lombok.Getter;
+
+@Getter
 public class SignResponse {
     private boolean success;
     private String message;
     private String userName;
     private String token;
+    private Boolean available; // 닉네임 중복확인용
 
-    // 로그인 성공
+    // 로그인 성공 시
     public SignResponse(boolean success, String message, String userName, String token) {
         this.success = success;
         this.message = message;
@@ -14,25 +18,23 @@ public class SignResponse {
         this.token = token;
     }
 
-    // 회원가입 성공 / 로그인 실패
+    // 회원가입 성공 시
     public SignResponse(boolean success, String message, String userName) {
         this.success = success;
         this.message = message;
         this.userName = userName;
-        this.token = null;
     }
 
-    // 회원가입 실패
+    // 실패 / 공통 응답용
     public SignResponse(boolean success, String message) {
         this.success = success;
         this.message = message;
-        this.userName = null;
-        this.token = null;
     }
 
-    // Getter 메서드들 (기존과 동일)
-    public boolean isSuccess() { return success; }
-    public String getMessage() { return message; }
-    public String getUserName() { return userName; }
-    public String getToken() { return token; }
+    // 닉네임 중복확인 응답용
+    public SignResponse(boolean success, String message, boolean available) {
+        this.success = success;
+        this.message = message;
+        this.available = available;
+    }
 }

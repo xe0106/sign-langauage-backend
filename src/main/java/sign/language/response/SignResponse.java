@@ -1,40 +1,25 @@
 package sign.language.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-@Getter
 public class SignResponse {
-    private boolean success;
-    private String message;
-    private String userName;
-    private String token;
-    private Boolean available; // 닉네임 중복확인용
 
-    // 로그인 성공 시
-    public SignResponse(boolean success, String message, String userName, String token) {
-        this.success = success;
-        this.message = message;
-        this.userName = userName;
-        this.token = token;
+    // 로그인 성공 응답
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SignInResult {
+        private String userName;
+        private String token;
     }
 
-    // 회원가입 성공 시
-    public SignResponse(boolean success, String message, String userName) {
-        this.success = success;
-        this.message = message;
-        this.userName = userName;
-    }
-
-    // 실패 / 공통 응답용
-    public SignResponse(boolean success, String message) {
-        this.success = success;
-        this.message = message;
-    }
-
-    // 닉네임 중복확인 응답용
-    public SignResponse(boolean success, String message, boolean available) {
-        this.success = success;
-        this.message = message;
-        this.available = available;
+    // 닉네임 중복 확인 응답
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class NicknameCheckResult {
+        private Boolean available;
     }
 }

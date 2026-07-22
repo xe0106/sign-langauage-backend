@@ -2,31 +2,37 @@ package sign.language.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.io.Decoders;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
 
-    // 토큰 서명에 사용할 비밀키 (최소 256비트 이상의 임의 키)
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final Key key;
+    private final long tokenValidityInMilliseconds = 1000L * 60 * 60 * 24; // 24시간
+
+    // application.yml에서 jwt.secret 값을 가져옴
+    public JwtTokenProvider(@Value("${jwt.secret:your-256-bit-secret-key-must-be-at-least-32-bytes-long-sign-language}") String secretKey) {
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
+    }
 
     // JWT 토큰 생성
     public String createToken(String userId) {
         Date now = new Date();
-        // 토큰 유효 시간 (24시간)
-        long tokenValidityInMilliseconds = 1000L * 60 * 60 * 24;
         Date validity = new Date(now.getTime() + tokenValidityInMilliseconds);
 
         return Jwts.builder()
-                .setSubject(userId) // 토큰 주인의 ID 저장
+                .setSubject(userId)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key) // Algorithm 명시 없이 key만 넘기는 것이 JJWT 0.11+ 표준 방식입니다
                 .compact();
     }
 
@@ -49,5 +55,18 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    // 토큰의 남은 만료시간(ms) 계산
+    public long getExpiration(String token) {
+        Date expiration = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+
+        long now = new Date().getTime();
+        return (expiration.getTime() - now);
     }
 }

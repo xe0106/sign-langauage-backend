@@ -51,6 +51,14 @@ public class User {
     @Column(name = "gender")
     private Gender gender;
 
+    public enum Status {
+        LOGIN, LOGOUT, DELETED
+    }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private Status status;
+
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
@@ -104,4 +112,20 @@ public class User {
     @NonNull
     @OneToMany(mappedBy = "user")
     private Set<UserLectureProgress> userLectureProgresses = new LinkedHashSet<>();
+
+    public void withdraw() {
+        // 이메일 중복 방지 및 식별 불가능하도록 익명화
+        this.email = "deleted_" + this.id + "@deleted.com";
+
+        // 비밀번호 민감 정보 초기화
+        this.passwordHash = "";
+
+        // 닉네임 및 개인정보 변경
+        this.nickname = "탈퇴한 회원" + getId();
+        this.name = "탈퇴자" + getId();
+        this.phoneNumber = null;
+
+        // 탈퇴/수정 시각 업데이트
+        this.updatedAt = Instant.now();
+    }
 }

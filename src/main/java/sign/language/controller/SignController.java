@@ -1,9 +1,14 @@
 package sign.language.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import sign.language.domain.User;
+import sign.language.request.ProfileModifyRequest;
 import sign.language.request.SignInRequest;
+import sign.language.request.SignOffRequest;
 import sign.language.request.SignUpRequest;
+import sign.language.response.ApiResponse;
 import sign.language.response.SignResponse;
 import sign.language.service.SignService;
 
@@ -17,39 +22,39 @@ public class SignController {
         this.signService = signService;
     }
 
-    // 닉네임 중복 확인 API
-    @GetMapping("/check-nickname")
-    public SignResponse checkNickname(@RequestParam String nickname) {
-        boolean available = signService.checkNicknameAvailable(nickname);
-        if (available) {
-            return new SignResponse(true, "사용 가능한 닉네임입니다.", true);
-        } else {
-            return new SignResponse(false, "이미 사용 중인 닉네임입니다.", false);
-        }
-    }
-
     // 회원가입 API
     @PostMapping("/signup")
-    public SignResponse signUp(@RequestBody SignUpRequest request) {
-        boolean success = signService.signUp(request);
-
-        if (success) {
-            return new SignResponse(true, "회원가입이 완료되었습니다.", request.getName());
-        } else {
-            return new SignResponse(false, "이미 가입된 이메일입니다.");
-        }
+    public ApiResponse<String> signUp(@Valid @RequestBody SignUpRequest request) {
+        String userName = signService.signUp(request);
+        return ApiResponse.onSuccess(userName);
     }
 
     // 로그인 API
     @PostMapping("/signin")
-    public SignResponse signIn(@RequestBody SignInRequest request) {
-        String token = signService.signIn(request.getEmail(), request.getPassword());
+    public ApiResponse<SignResponse.SignInResult> signIn(@Valid @RequestBody SignInRequest request) {
+        SignResponse.SignInResult result = signService.signIn(request.getEmail(), request.getPassword());
+        return ApiResponse.onSuccess(result);
+    }
 
-        if (token != null) {
-            User user = signService.findByEmail(request.getEmail());
-            return new SignResponse(true, "로그인 성공!", user.getName(), token);
-        } else {
-            return new SignResponse(false, "이메일 또는 비밀번호가 잘못되었습니다.");
-        }
+    // 회원탈퇴 API
+    @DeleteMapping("/signoff")
+    public ApiResponse<String> signOff(
+            @AuthenticationPrincipal String email,
+            @Valid @RequestBody SignOffRequest request
+    ) {
+        // 토큰의 이메일과 입력받은 비밀번호로 탈퇴 처리
+        signService.signOff(email, request.getPassword());
+        return ApiResponse.onSuccess("회원탈퇴가 완료되었습니다.");
+    }
+
+    // 프로필 정보 수정 API (로그인 필수)
+    @PatchMapping("/modify")
+    public ApiResponse<String> signModify(
+            @AuthenticationPrincipal String email,
+            @RequestBody ProfileModifyRequest request
+    ) {
+        // 이미 인증을 통과하고 이메일이 들어왔으므로 바로 서비스 호출
+        signService.signModify(email, request);
+        return ApiResponse.onSuccess("프로필이 성공적으로 수정되었습니다.");
     }
 }

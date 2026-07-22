@@ -24,3 +24,6 @@ jasypt:
   encryptor:
     password: ${JASYPT_ENCRYPTOR_PASSWORD}
     algorithm: PBEWithMD5AndDES # 암호화 시 사용한 알고리즘 (기본값인 경우)
+jwt:
+  # 최소 32글자 이상이어야 합니다! (HS256 요구사항)
+  secret: your-256-bit-secret-key-must-be-at-least-32-bytes-long-sign-language

@@ -22,9 +22,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
-	// 패스워드 암호화를 위해 스프링 시큐리티 크립토 추가
-	implementation 'org.springframework.security:spring-security-crypto'
-
 	// DB 암호화 모듈
 	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5'
 
@@ -44,6 +41,16 @@ dependencies {
 	// JPA
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5'
+
+	// 검증 라이브러리
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Spring Security
+	implementation 'org.springframework.boot:spring-boot-starter-security' // 로그인 인증
+	implementation 'org.springframework.security:spring-security-crypto' // DB 암호화
+
+	// Spring Data Redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 }
 

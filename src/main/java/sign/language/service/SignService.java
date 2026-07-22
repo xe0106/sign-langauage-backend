@@ -1,6 +1,5 @@
 package sign.language.service;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,23 +15,27 @@ import sign.language.util.JwtTokenProvider;
 
 import java.time.Instant;
 
+import static sign.language.util.JwtTokenProvider.REFRESH_TOKEN_VALIDITY_IN_MS;
+
 @Service
 public class SignService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RedisService redisService;
 
-    public SignService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
+    public SignService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, RedisService redisService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.redisService = redisService;
     }
 
     // 회원가입
     @Transactional
     public String signUp(SignUpRequest request) {
-        // 이메일 중복 검약
+        // 이메일 중복 검사
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new SignException(ErrorStatus.DUPLICATE_EMAIL);
         }
@@ -42,18 +45,17 @@ public class SignService {
             throw new SignException(ErrorStatus.DUPLICATE_NICKNAME);
         }
 
-        User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setName(request.getName());
-        user.setNickname(request.getNickname());
-        user.setGender(request.getGender());
-        user.setBirthDate(request.getBirthDate());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setLearningDays(0);
-        user.setNotificationEnabled(true);
-        user.setCreatedAt(Instant.now());
-        user.setUpdatedAt(Instant.now());
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
+        User user = User.create(
+                request.getEmail(),
+                encodedPassword,
+                request.getName(),
+                request.getNickname(),
+                request.getGender(),
+                request.getBirthDate(),
+                request.getPhoneNumber()
+        );
 
         userRepository.save(user);
         return user.getName();
@@ -69,10 +71,22 @@ public class SignService {
             throw new SignException(ErrorStatus.INVALID_PASSWORD);
         }
 
-        String token = jwtTokenProvider.createToken(user.getEmail());
+        // 1. Access Token & Refresh Token 생성
+        String accessToken = jwtTokenProvider.createAccessToken(user.getEmail());
+        String refreshToken = jwtTokenProvider.createRefreshToken(user.getEmail());
+
+        // 2. Redis에 Refresh Token 저장 (만료시간 14일 설정)
+        redisService.setRefreshToken(user.getEmail(), refreshToken, REFRESH_TOKEN_VALIDITY_IN_MS);
+
         String userName = (user.getName() != null) ? user.getName() : "";
 
-        return new SignResponse.SignInResult(userName, token);
+        // 3. DTO 반환 (grantType, accessToken, refreshToken 전달)
+        return new SignResponse.SignInResult(userName, "Bearer", accessToken, refreshToken);
+    }
+
+    @Transactional
+    public void signOut(String email) {
+        redisService.deleteRefreshToken(email);
     }
 
     // 회원 탈퇴 (소프트 삭제 및 데이터 익명화)
@@ -86,6 +100,7 @@ public class SignService {
         }
         // 소프트 삭제 및 익명화 실행
         user.withdraw();
+        redisService.deleteRefreshToken(email);
     }
 
     // 프로필 정보 수정
@@ -95,16 +110,20 @@ public class SignService {
                 .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 닉네임 변경 요청이 있고, 기존 닉네임과 다를 때만 수행
+        String newNickname = null;
         if (StringUtils.hasText(request.getNickname()) && !request.getNickname().equals(user.getNickname())) {
             if (userRepository.existsByNickname(request.getNickname())) {
                 throw new SignException(ErrorStatus.DUPLICATE_NICKNAME);
             }
-            user.setNickname(request.getNickname());
+            newNickname = request.getNickname();
         }
 
-        if (request.getGender() != null) user.setGender(request.getGender());
-        if (request.getBirthDate() != null) user.setBirthDate(request.getBirthDate());
-        if (StringUtils.hasText(request.getPhoneNumber())) user.setPhoneNumber(request.getPhoneNumber());
+        user.updateProfile(
+                newNickname,
+                request.getGender(),
+                request.getBirthDate(),
+                StringUtils.hasText(request.getPhoneNumber()) ? request.getPhoneNumber() : null
+        );
 
         user.setUpdatedAt(Instant.now());
     }

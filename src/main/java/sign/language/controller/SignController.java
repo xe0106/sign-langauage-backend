@@ -36,6 +36,13 @@ public class SignController {
         return ApiResponse.onSuccess(result);
     }
 
+    // 로그아웃
+    @PostMapping("/signout")
+    public ApiResponse<String> signOut(@AuthenticationPrincipal String email) {
+        signService.signOut(email);
+        return ApiResponse.onSuccess();
+    }
+
     // 회원탈퇴 API
     @DeleteMapping("/signoff")
     public ApiResponse<String> signOff(
@@ -44,7 +51,7 @@ public class SignController {
     ) {
         // 토큰의 이메일과 입력받은 비밀번호로 탈퇴 처리
         signService.signOff(email, request.getPassword());
-        return ApiResponse.onSuccess("회원탈퇴가 완료되었습니다.");
+        return ApiResponse.onSuccess();
     }
 
     // 프로필 정보 수정 API (로그인 필수)
@@ -55,6 +62,6 @@ public class SignController {
     ) {
         // 이미 인증을 통과하고 이메일이 들어왔으므로 바로 서비스 호출
         signService.signModify(email, request);
-        return ApiResponse.onSuccess("프로필이 성공적으로 수정되었습니다.");
+        return ApiResponse.onSuccess();
     }
 }

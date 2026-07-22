@@ -16,6 +16,14 @@ spring:
     open-in-view: false
 
   data:
+
+    redis:
+      host: sign-language-redis-sign-language.e.aivencloud.com
+      port: 23071
+      username: default
+      password: ENC(+a7u0e1VXhDlJn6amAmQP/14THEmA56CqtWvVrUx4Gpm9mtrKBEwdA==)
+      ssl:
+        enabled: true
     jpa:
       repositories:
         bootstrap-mode: default
@@ -23,7 +31,8 @@ spring:
 jasypt:
   encryptor:
     password: ${JASYPT_ENCRYPTOR_PASSWORD}
-    algorithm: PBEWithMD5AndDES # 암호화 시 사용한 알고리즘 (기본값인 경우)
+    algorithm: PBEWithMD5AndDES
+
 jwt:
-  # 최소 32글자 이상이어야 합니다! (HS256 요구사항)
-  secret: your-256-bit-secret-key-must-be-at-least-32-bytes-long-sign-language
+  # 2. 커스텀 비밀키로 수정 (32자 이상)
+  secret: signLanguageJwtSecretKeyForAuthentication2026SecureKey!

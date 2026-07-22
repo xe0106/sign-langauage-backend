@@ -113,6 +113,42 @@ public class User {
     @OneToMany(mappedBy = "user")
     private Set<UserLectureProgress> userLectureProgresses = new LinkedHashSet<>();
 
+    public static User create(String email, String encodedPassword, String name, String nickname,
+                              Gender gender, LocalDate birthDate, String phoneNumber) {
+        User user = new User();
+        user.email = email;
+        user.passwordHash = encodedPassword;
+        user.name = name;
+        user.nickname = nickname;
+        user.gender = gender;
+        user.birthDate = birthDate;
+        user.phoneNumber = phoneNumber;
+
+        // 초기 기본값 설정
+        user.learningDays = 0;
+        user.notificationEnabled = true;
+        user.createdAt = Instant.now();
+        user.updatedAt = Instant.now();
+
+        return user;
+    }
+
+    public void updateProfile(String nickname, Gender gender, LocalDate birthDate, String phoneNumber) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (gender != null) {
+            this.gender = gender;
+        }
+        if (birthDate != null) {
+            this.birthDate = birthDate;
+        }
+        if (phoneNumber != null) {
+            this.phoneNumber = phoneNumber;
+        }
+        this.updatedAt = Instant.now();
+    }
+
     public void withdraw() {
         // 이메일 중복 방지 및 식별 불가능하도록 익명화
         this.email = "deleted_" + this.id + "@deleted.com";

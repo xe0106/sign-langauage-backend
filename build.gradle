@@ -49,8 +49,11 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security' // 로그인 인증
 	implementation 'org.springframework.security:spring-security-crypto' // DB 암호화
 
-	// Spring Data Redis
+	// Spring Data Redis(for token)
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// Spring Cloud AWS S3
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.1'
 
 }
 

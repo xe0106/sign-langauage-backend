@@ -1,5 +1,6 @@
 package sign.language.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,9 @@ public class SignService {
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisService redisService;
 
+    @Value("${app.default-profile-image}")
+    private String defaultProfileImage;
+
     public SignService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider, RedisService redisService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -46,6 +50,9 @@ public class SignService {
         }
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
+        String targetProfileImage = StringUtils.hasText(request.getProfileImageUrl())
+                ? request.getProfileImageUrl()
+                : defaultProfileImage;
 
         User user = User.create(
                 request.getEmail(),
@@ -54,7 +61,8 @@ public class SignService {
                 request.getNickname(),
                 request.getGender(),
                 request.getBirthDate(),
-                request.getPhoneNumber()
+                request.getPhoneNumber(),
+                targetProfileImage
         );
 
         userRepository.save(user);
@@ -118,11 +126,22 @@ public class SignService {
             newNickname = request.getNickname();
         }
 
+        String targetProfileImage = user.getProfileImageUrl(); // 기본값은 기존 이미지 유지
+
+        if (StringUtils.hasText(request.getProfileImageUrl())) {
+            if ("DEFAULT".equalsIgnoreCase(request.getProfileImageUrl())) {
+                targetProfileImage = defaultProfileImage; // 기본 이미지로 초기화 요청 시
+            } else {
+                targetProfileImage = request.getProfileImageUrl(); // 새 이미지로 변경
+            }
+        }
+
         user.updateProfile(
                 newNickname,
                 request.getGender(),
                 request.getBirthDate(),
-                StringUtils.hasText(request.getPhoneNumber()) ? request.getPhoneNumber() : null
+                StringUtils.hasText(request.getPhoneNumber()) ? request.getPhoneNumber() : null,
+                targetProfileImage
         );
 
         user.setUpdatedAt(Instant.now());

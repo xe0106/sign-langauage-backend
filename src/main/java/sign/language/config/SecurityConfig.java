@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/sign/language/auth/signup",
                                 "/sign/language/auth/signin",
+                                "/sign/language/images/upload",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()

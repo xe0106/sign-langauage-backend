@@ -21,7 +21,11 @@ public enum ErrorStatus {
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "MEMBER409_NICKNAME", "이미 사용 중인 닉네임입니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "MEMBER401", "비밀번호가 일치하지 않습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "MEMBER400_FORMAT", "입력값 형식이 올바르지 않습니다."),
-    LOGOUT_FAILED(HttpStatus.BAD_REQUEST, "MEMBER400_LOGOUT", "로그아웃 처리에 실패했습니다.")
+    LOGOUT_FAILED(HttpStatus.BAD_REQUEST, "MEMBER400_LOGOUT", "로그아웃 처리에 실패했습니다."),
+
+    // 파일 / S3 관련 에러 코드
+    INVALID_FILE(HttpStatus.NOT_FOUND, "FILE404", "유효하지 않거나 비어있는 파일입니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE400", "S3 이미지 업로드에 실패했습니다.")
     ;
 
     private final HttpStatus httpStatus;

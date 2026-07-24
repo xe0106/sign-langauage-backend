@@ -8,13 +8,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -114,7 +115,7 @@ public class User {
     private Set<UserLectureProgress> userLectureProgresses = new LinkedHashSet<>();
 
     public static User create(String email, String encodedPassword, String name, String nickname,
-                              Gender gender, LocalDate birthDate, String phoneNumber) {
+                              Gender gender, LocalDate birthDate, String phoneNumber, String profileImageUrl) {
         User user = new User();
         user.email = email;
         user.passwordHash = encodedPassword;
@@ -129,11 +130,12 @@ public class User {
         user.notificationEnabled = true;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
+        user.profileImageUrl = profileImageUrl;
 
         return user;
     }
 
-    public void updateProfile(String nickname, Gender gender, LocalDate birthDate, String phoneNumber) {
+    public void updateProfile(String nickname, Gender gender, LocalDate birthDate, String phoneNumber, String profileImageUrl) {
         if (nickname != null) {
             this.nickname = nickname;
         }
@@ -145,6 +147,9 @@ public class User {
         }
         if (phoneNumber != null) {
             this.phoneNumber = phoneNumber;
+        }
+        if (profileImageUrl != null) {
+            this.profileImageUrl = profileImageUrl;
         }
         this.updatedAt = Instant.now();
     }
@@ -163,5 +168,6 @@ public class User {
 
         // 탈퇴/수정 시각 업데이트
         this.updatedAt = Instant.now();
+        this.profileImageUrl = null;
     }
 }

@@ -25,7 +25,9 @@ public enum ErrorStatus {
 
     // 파일 / S3 관련 에러 코드
     INVALID_FILE(HttpStatus.NOT_FOUND, "FILE404", "유효하지 않거나 비어있는 파일입니다."),
-    FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE400", "S3 이미지 업로드에 실패했습니다.")
+    INVALID_FILE_EXTENSION(HttpStatus.NOT_FOUND, "FILE400_EXTENSION", "잘못된 파일 확장자명 입니다."),
+    FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE400_DEFAULT", "S3 이미지 업로드에 실패했습니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "FILE400_MAX", "파일 용량이 허용 범위를 초과했습니다.")
     ;
 
     private final HttpStatus httpStatus;

@@ -3,15 +3,14 @@ package sign.language.service;
 import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.error.Error;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import sign.language.errorcode.ErrorStatus;
 import sign.language.exception.ImageException;
-import sign.language.exception.SignException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -32,7 +31,10 @@ public class ImageService {
             throw new ImageException(ErrorStatus.INVALID_FILE);
         }
 
-        // 파일명 중복 방지를 위한 UUID 생성 (예: uuid_profile.png)
+        // 확장자 검증 (이미지 파일 여부 체크)
+        validateImageExtension(file.getOriginalFilename());
+
+        // 파일명 중복 방지를 위한 UUID 생성
         String originalFilename = file.getOriginalFilename();
         String storeFilename = createStoreFilename(originalFilename);
 
@@ -44,6 +46,20 @@ public class ImageService {
             return resource.getURL().toString();
         } catch (IOException e) {
             throw new ImageException(ErrorStatus.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    // 💡 확장자 검증 메서드 예시
+    private void validateImageExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            throw new ImageException(ErrorStatus.INVALID_FILE_EXTENSION);
+        }
+        String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+
+        // 허용할 이미지 확장자 목록
+        List<String> allowedExtensions = List.of("jpg", "jpeg", "png", "gif", "webp");
+        if (!allowedExtensions.contains(extension)) {
+            throw new ImageException(ErrorStatus.INVALID_FILE_EXTENSION);
         }
     }
 

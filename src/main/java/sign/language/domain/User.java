@@ -13,10 +13,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
-import org.jspecify.annotations.NonNull;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.util.StringUtils;
-
+import lombok.NonNull;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;

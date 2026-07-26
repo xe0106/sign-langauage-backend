@@ -21,7 +21,7 @@ public class JasyptConfigTest {
         config.setStringOutputType("base64");
         encryptor.setConfig(config);
 
-        String plainPassword = "아프리카 몰라";
+        String plainPassword = "Encrypted";
 
         String encrypted = encryptor.encrypt(plainPassword);
 

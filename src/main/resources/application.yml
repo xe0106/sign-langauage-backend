@@ -27,7 +27,17 @@ spring:
       repositories:
         bootstrap-mode: default
 
-  ## aws s3 클라우드 저장소를 통해 이미지 보관 예정
+  cloud:
+    aws:
+      credentials:
+        access-key: ENC(cZYqIEFzNENSkJRcXtW7z20RHR+8Wo6wlaiJ2MaZ0Ifw/V5BLRZIDaPnPN2XWu4i)
+        secret-key: ENC(8yTMhPF0tHpZr/MiDXupIYkN8O7rlQgOWJkNjwVwGZsBfJck9iGZtWe9csTzpbSvsVNYmHLk1eNDUXNohXDsCAmnfPyTv1OlSXg7WpNeQsY=)
+      s3:
+        endpoint: https://d9fa9e66ecee58b9bfa0e8ab025fbe50.r2.cloudflarestorage.com
+        bucket: sign-language-bucket
+      region:
+        static: us-east-1 # 또는 auto
+
 jasypt:
   encryptor:
     password: ${JASYPT_ENCRYPTOR_PASSWORD}
@@ -38,4 +48,4 @@ jwt:
   secret: signLanguageJwtSecretKeyForAuthentication2026SecureKey!
 
 app:
-  default-profile-image: ${DEFAULT_PROFILE_URL:https://your-s3-bucket.s3.ap-northeast-2.amazonaws.com/default-profile.png}
+  default-profile-image: ${DEFAULT_PROFILE_URL:https://pub-9fe4fb0ab27c4f93b468525639d75c4e.r2.dev/default-profile-image.png}

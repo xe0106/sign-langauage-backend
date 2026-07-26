@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
-import org.jspecify.annotations.NonNull;
+import lombok.NonNull;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;

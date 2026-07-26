@@ -8,7 +8,7 @@ import sign.language.response.ImageResponse;
 import sign.language.service.ImageService;
 
 @RestController
-@RequestMapping("/images")
+@RequestMapping("/sign/language/images")
 @RequiredArgsConstructor
 public class ImageUploadController {
 

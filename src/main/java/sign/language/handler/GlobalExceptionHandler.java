@@ -1,10 +1,11 @@
-package sign.language.common.exception;
+package sign.language.handler;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import sign.language.errorcode.ErrorStatus;
 import sign.language.exception.GeneralException;
 import sign.language.exception.SignException;
@@ -14,6 +15,13 @@ import java.nio.file.AccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        return ResponseEntity
+                .status(ErrorStatus.BAD_REQUEST.getHttpStatus())
+                .body(ApiResponse.onFailure(ErrorStatus.FILE_SIZE_EXCEEDED.getCode(), ErrorStatus.FILE_SIZE_EXCEEDED.getMessage()));
+    }
 
     @ExceptionHandler(SignException.class)
     public ResponseEntity<ApiResponse<Void>> handleSignException(SignException e) {

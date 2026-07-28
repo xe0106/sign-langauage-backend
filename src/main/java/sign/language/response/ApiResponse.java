@@ -15,7 +15,7 @@ public class ApiResponse<T> {
     private final String message;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private T result;
+    private T data;
 
     // 성공 응답 (결과 데이터 있음)
     public static <T> ApiResponse<T> onSuccess(T result) {

@@ -185,65 +185,38 @@ public class User {
     }
 
     /**
-     * 학습 활동 반영 통합 메서드 (강의 시청 or 퀴즈 풀이)
-     * @param isLectureCompleted 오늘 강의 1건 완강 여부
-     * @param isQuizCorrect 퀴즈 1건 정답 여부
+     * 퀴즈 정답 제출 시 실행 (개당 20% 상승: 0 -> 20 -> 40 -> 60 -> 80 -> 100)
      */
-    public void recordLearningActivity(boolean isLectureCompleted, boolean isQuizCorrect) {
+    public void recordQuizCorrect() {
         ZoneId zoneId = ZoneId.of("Asia/Seoul");
         LocalDate today = LocalDate.now(zoneId);
 
-        // Null-Safe 기본값 세팅
         if (this.learningDays == null) this.learningDays = 0;
         if (this.learningPercentage == null) this.learningPercentage = 0;
 
-        // '이번 활동 이전'의 학습 날짜 미리 저장 (updatedAt이 기준)
         LocalDate previousActivityDate = (this.updatedAt != null)
                 ? this.updatedAt.atZone(zoneId).toLocalDate()
                 : null;
 
-        // 날짜가 바뀌었으면(오늘 첫 활동이면) 오늘 달성률 0%로 초기화
+        // 날짜가 바뀌었으면(오늘 첫 퀴즈 활동이면) 오늘 달성률 0%로 리셋
         if (previousActivityDate == null || !previousActivityDate.isEqual(today)) {
             this.learningPercentage = 0;
         }
 
-        // 점수 부여 계산
         int currentPercentage = this.learningPercentage;
-        int newPercentage = getNewPercentage(isLectureCompleted, isQuizCorrect, currentPercentage);
+        // 퀴즈 1문제당 +20% (최대 100%)
+        int newPercentage = Math.min(100, currentPercentage + 20);
 
-        // 연속 학습 일수(Streak) 반영 조건
         // 오늘 "처음으로 100% 달성한 순간"에만 Streak 계산 및 반영
-        if (currentPercentage < 100 && newPercentage >= 100) {
-            if (previousActivityDate != null && previousActivityDate.isEqual(today.minusDays(1))) {
-                // 어제도 학습을 완료했고 오늘 연속 달성한 경우
-                this.learningDays += 1;
+        if (currentPercentage < 100 && newPercentage == 100) {
+            if (previousActivityDate.isEqual(today.minusDays(1))) {
+                this.learningDays += 1; // 연속 달성
             } else {
-                // 어제 건너뛰었거나, 최초로 100%를 채운 경우
-                this.learningDays = 1;
+                this.learningDays = 1;  // 신규/끊긴 후 재달성
             }
         }
 
-        // 6. 상태 변경 및 최신 시각 업데이트
         this.learningPercentage = newPercentage;
         this.updatedAt = Instant.now();
-    }
-
-    private int getNewPercentage(boolean isLectureCompleted, boolean isQuizCorrect, int currentPercentage) {
-        int addedPercentage = 0;
-
-        // 강의 완강시: 기존 진도 중 강의 지분(최대 50%)을 제외한 남은 퀴즈 점수 계산 후, 강의 점수 50%로 채움
-        if (isLectureCompleted) {
-            // 강의 점수는 최대 50%까지만 인정
-            if (currentPercentage < 50) {
-                addedPercentage += (50 - currentPercentage);
-            }
-        }
-
-        // 퀴즈 정답시: 개당 +10% (최대 100%까지)
-        if (isQuizCorrect) {
-            addedPercentage += 10;
-        }
-
-        return Math.min(100, currentPercentage + addedPercentage);
     }
 }

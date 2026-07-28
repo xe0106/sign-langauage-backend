@@ -25,7 +25,7 @@ public class QuizController {
      */
     @GetMapping
     public ApiResponse<List<QuizResponse>> getQuizzes(
-            @RequestParam(name = "count", required = false, defaultValue = "10") Integer count
+            @RequestParam(name = "count", required = false, defaultValue = "5") Integer count
     ) {
         List<QuizResponse> responses = quizService.getQuizzes(count);
         return ApiResponse.onSuccess(responses);

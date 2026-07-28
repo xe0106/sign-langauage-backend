@@ -68,7 +68,7 @@ public class QuizService {
 
         // 연속 학습 일수(Streak) 반영
         if (isCorrect) {
-            user.recordLearningActivity(false, true);
+            user.recordQuizCorrect();
         }
 
         return QuizSubmitResponse.of(quizId, isCorrect, quiz.getCorrectOptionIndex(), explanation);

@@ -7,6 +7,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import sign.language.response.ApiResponse;
+import sign.language.response.LecturePageResponse;
 import sign.language.response.LectureProgressResponse;
 import sign.language.response.LectureResponse;
 import sign.language.response.PageResponse;
@@ -27,12 +28,13 @@ public class LectureController {
      * 예시: GET /sign/language/lectures?category=BASIC&page=0&size=10
      */
     @GetMapping
-    public ApiResponse<PageResponse<LectureResponse>> getLectures(
+    public ApiResponse<LecturePageResponse> getLectures(
             @AuthenticationPrincipal String email,
             @RequestParam(name = "category", required = false) String category,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ApiResponse.onSuccess(lectureService.getLectures(email, category, pageable));
+        LecturePageResponse response = lectureService.getLectures(email, category, pageable);
+        return ApiResponse.onSuccess(response);
     }
 
     /**

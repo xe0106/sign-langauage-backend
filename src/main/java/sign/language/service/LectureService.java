@@ -14,6 +14,7 @@ import sign.language.errorcode.ErrorStatus;
 import sign.language.repository.LectureRepository;
 import sign.language.repository.UserLectureProgressRepository;
 import sign.language.repository.UserRepository;
+import sign.language.response.LecturePageResponse;
 import sign.language.response.LectureProgressResponse;
 import sign.language.response.LectureResponse;
 import sign.language.response.PageResponse;
@@ -33,19 +34,22 @@ public class LectureService {
     /**
      * 강의 목록 페이징 조회 (카테고리 필터링 선택 가능)
      */
-    public PageResponse<LectureResponse> getLectures(String email, String categoryName, Pageable pageable) {
+    public LecturePageResponse getLectures(String email, String categoryName, Pageable pageable) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new LectureException(ErrorStatus.MEMBER_NOT_FOUND));
 
         Page<Lecture> lecturePage;
+        long completedCount;
 
         // 카테고리 조건 분기
         if (categoryName == null || categoryName.isBlank() || "ALL".equalsIgnoreCase(categoryName)) {
             lecturePage = lectureRepository.findAll(pageable);
+            completedCount = progressRepository.countCompletedByUserId(user.getId());
         } else {
             try {
                 Category category = Category.valueOf(categoryName.toUpperCase());
                 lecturePage = lectureRepository.findByCategory(category, pageable);
+                completedCount = progressRepository.countCompletedByUserIdAndCategory(user.getId(), category);
             } catch (IllegalArgumentException e) {
                 // 지원하지 않는 카테고리 예외 (LECTURE400)
                 throw new LectureException(ErrorStatus.INVALID_CATEGORY);
@@ -63,7 +67,7 @@ public class LectureService {
             return LectureResponse.of(lecture, isCompleted);
         });
 
-        return PageResponse.of(responsePage);
+        return LecturePageResponse.of(responsePage, completedCount);
     }
 
     /**
@@ -103,9 +107,14 @@ public class LectureService {
 
         UserLectureProgress savedProgress = progressRepository.save(progress);
 
-        // 유저 학습 일수(learningDays) 출석체크 업데이트
-        user.recordLearningActivity(true, false);
-
         return LectureProgressResponse.from(savedProgress);
+    }
+
+    /**
+     * 카테고리 내 완강한 강의 개수 조회 (예: GREETING 카테고리에서 몇 개 완료했는지)
+     */
+    @Transactional(readOnly = true)
+    public long getCompletedCountByCategory(Long userId, Lecture.Category category) {
+        return progressRepository.countCompletedByUserIdAndCategory(userId, category);
     }
 }

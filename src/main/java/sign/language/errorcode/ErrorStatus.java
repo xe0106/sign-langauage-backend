@@ -15,6 +15,9 @@ public enum ErrorStatus {
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON404", "요청한 리소스를 찾을 수 없습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON500", "서버 오류가 발생했습니다."),
 
+    // 매개변수 누락
+    EMPTY_PARAMETER(HttpStatus.BAD_REQUEST, "PARAM400", "필수 요청 매개변수가 누락되었습니다."),
+
     // 회원, 프로필
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER404", "존재하지 않는 회원입니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "MEMBER409_EMAIL", "이미 가입된 이메일입니다."),
@@ -31,7 +34,11 @@ public enum ErrorStatus {
 
     // 수어 강의 관련 에러 코드
     LECTURE_NOT_FOUND(HttpStatus.NOT_FOUND, "LECTURE404", "존재하지 않는 강의 ID입니다."),
-    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "LECTURE400", "지원하지 않는 카테고리 형식입니다.")
+    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "LECTURE400", "지원하지 않는 카테고리 형식입니다."),
+
+    // 퀴즈 관련 에러 코드
+    QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "QUIZ404", "퀴즈가 존재하지 않습니다."),
+    QUIZ_INVALID_COUNT(HttpStatus.BAD_REQUEST, "QUIZ400", "퀴즈 요청 개수는 1개 이상 20개 이하여야 합니다.")
     ;
 
     private final HttpStatus httpStatus;

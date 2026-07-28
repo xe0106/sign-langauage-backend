@@ -2,8 +2,11 @@ package sign.language.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import sign.language.errorcode.ErrorStatus;
+import sign.language.exception.SignException;
 import sign.language.request.ProfileModifyRequest;
 import sign.language.request.SignInRequest;
 import sign.language.request.SignOffRequest;
@@ -34,6 +37,19 @@ public class SignController {
     public ApiResponse<SignResponse.SignInResult> signIn(@Valid @RequestBody SignInRequest request) {
         SignResponse.SignInResult result = signService.signIn(request.getEmail(), request.getPassword());
         return ApiResponse.onSuccess(result);
+    }
+
+    // 닉네임 중복 확인 API
+    @GetMapping("/check-nickname")
+    public ApiResponse<String> checkNickname(
+            @RequestParam("nickname") String nickname
+    ) {
+        if (!org.springframework.util.StringUtils.hasText(nickname)) {
+            throw new SignException(ErrorStatus.INVALID_INPUT_VALUE);
+        }
+
+        String available = signService.checkNicknameDuplicate(nickname.trim());
+        return ApiResponse.onSuccess(available);
     }
 
     // 로그아웃

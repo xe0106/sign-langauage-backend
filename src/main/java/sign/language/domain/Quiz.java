@@ -18,7 +18,7 @@ import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.Map;
+import java.util.List;
 
 @Getter
 @Setter
@@ -38,7 +38,7 @@ public class Quiz {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "options", nullable = false)
-    private Map<String, Object> options;
+    private List<String> options;
 
     @Column(name = "correct_option_index", nullable = false)
     private Integer correctOptionIndex;

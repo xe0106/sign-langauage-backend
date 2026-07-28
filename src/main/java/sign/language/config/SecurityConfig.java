@@ -45,8 +45,10 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/error",
                                 "/sign/language/auth/signup",
                                 "/sign/language/auth/signin",
+                                "/sign/language/auth/check-nickname",
                                 "/sign/language/images/upload",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"

@@ -103,6 +103,9 @@ public class LectureService {
 
         UserLectureProgress savedProgress = progressRepository.save(progress);
 
+        // 유저 학습 일수(learningDays) 출석체크 업데이트
+        user.recordLearningActivity(true, false);
+
         return LectureProgressResponse.from(savedProgress);
     }
 }

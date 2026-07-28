@@ -36,6 +36,15 @@ public class SignService {
         this.redisService = redisService;
     }
 
+    // 닉네임 중복 검사
+    @Transactional(readOnly = true)
+    public String checkNicknameDuplicate(String nickname) {
+        if (userRepository.existsByNickname(nickname)) {
+            throw new SignException(ErrorStatus.DUPLICATE_NICKNAME);
+        }
+        return "사용 가능한 닉네임입니다."; // 사용 가능
+    }
+
     // 회원가입
     @Transactional
     public String signUp(SignUpRequest request) {
@@ -44,10 +53,8 @@ public class SignService {
             throw new SignException(ErrorStatus.DUPLICATE_EMAIL);
         }
 
-        // 닉네임 중복 검사
-        if (userRepository.existsByNickname(request.getNickname())) {
-            throw new SignException(ErrorStatus.DUPLICATE_NICKNAME);
-        }
+        // 이중 검사
+        checkNicknameDuplicate(request.getNickname());
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         String targetProfileImage = StringUtils.hasText(request.getProfileImageUrl())

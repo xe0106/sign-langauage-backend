@@ -87,6 +87,7 @@ public class SignService {
         redisService.setRefreshToken(user.getEmail(), refreshToken, REFRESH_TOKEN_VALIDITY_IN_MS);
 
         String userName = (user.getName() != null) ? user.getName() : "";
+        user.setLogin();
 
         // 3. DTO 반환 (grantType, accessToken, refreshToken 전달)
         return new SignResponse.SignInResult(userName, "Bearer", accessToken, refreshToken);
@@ -95,6 +96,10 @@ public class SignService {
     @Transactional
     public void signOut(String email) {
         redisService.deleteRefreshToken(email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
+        user.setLogOut();
     }
 
     // 회원 탈퇴 (소프트 삭제 및 데이터 익명화)

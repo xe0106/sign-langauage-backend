@@ -44,4 +44,20 @@ public class UserLectureProgress {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "last_watched_at")
     private Instant lastWatchedAt;
+
+    // 최초 수강 기록 생성
+    public static UserLectureProgress createProgress(User user, Lecture lecture) {
+        UserLectureProgress progress = new UserLectureProgress();
+        progress.user = user;
+        progress.lecture = lecture;
+        progress.isCompleted = false;
+        progress.lastWatchedAt = Instant.now();
+        return progress;
+    }
+
+    // 수강 완료 상태 변경
+    public void complete() {
+        this.isCompleted = true;
+        this.lastWatchedAt = Instant.now();
+    }
 }

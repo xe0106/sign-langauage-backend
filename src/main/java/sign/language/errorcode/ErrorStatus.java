@@ -15,7 +15,7 @@ public enum ErrorStatus {
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON404", "요청한 리소스를 찾을 수 없습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON500", "서버 오류가 발생했습니다."),
 
-    // 회원
+    // 회원, 프로필
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER404", "존재하지 않는 회원입니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "MEMBER409_EMAIL", "이미 가입된 이메일입니다."),
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "MEMBER409_NICKNAME", "이미 사용 중인 닉네임입니다."),
@@ -27,7 +27,11 @@ public enum ErrorStatus {
     INVALID_FILE(HttpStatus.NOT_FOUND, "FILE404", "유효하지 않거나 비어있는 파일입니다."),
     INVALID_FILE_EXTENSION(HttpStatus.NOT_FOUND, "FILE400_EXTENSION", "잘못된 파일 확장자명 입니다."),
     FILE_UPLOAD_FAILED(HttpStatus.BAD_REQUEST, "FILE400_DEFAULT", "S3 이미지 업로드에 실패했습니다."),
-    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "FILE400_MAX", "파일 용량이 허용 범위를 초과했습니다.")
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "FILE400_MAX", "파일 용량이 허용 범위를 초과했습니다."),
+
+    // 수어 강의 관련 에러 코드
+    LECTURE_NOT_FOUND(HttpStatus.NOT_FOUND, "LECTURE404", "존재하지 않는 강의 ID입니다."),
+    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "LECTURE400", "지원하지 않는 카테고리 형식입니다.")
     ;
 
     private final HttpStatus httpStatus;

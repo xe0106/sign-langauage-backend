@@ -70,6 +70,10 @@ public class User {
     @Column(name = "learning_days")
     private Integer learningDays;
 
+    @ColumnDefault("0")
+    @Column(name = "learning_percentage")
+    private Integer learningPercentage;
+
     @ColumnDefault("1")
     @Column(name = "notification_enabled")
     private Boolean notificationEnabled;
@@ -124,7 +128,9 @@ public class User {
 
         // 초기 기본값 설정
         user.learningDays = 0;
+        user.learningPercentage = 0;
         user.notificationEnabled = true;
+        user.status = Status.LOGOUT;
         user.createdAt = Instant.now();
         user.updatedAt = Instant.now();
         user.profileImageUrl = profileImageUrl;
@@ -162,9 +168,18 @@ public class User {
         this.nickname = "탈퇴한 회원" + getId();
         this.name = "탈퇴자" + getId();
         this.phoneNumber = null;
+        this.status = Status.DELETED;
 
         // 탈퇴/수정 시각 업데이트
         this.updatedAt = Instant.now();
         this.profileImageUrl = null;
+    }
+
+    public void setLogin() {
+        this.status = Status.LOGIN;
+    }
+
+    public void setLogOut() {
+        this.status = Status.LOGOUT;
     }
 }

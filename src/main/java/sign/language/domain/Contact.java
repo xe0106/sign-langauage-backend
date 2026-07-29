@@ -37,6 +37,9 @@ public class Contact {
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @Column(name = "last_contacted_at")
+    private Instant lastContactedAt;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id", nullable = false)
@@ -46,4 +49,21 @@ public class Contact {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     @JoinColumn(name = "target_user_id")
     private User targetUser;
+
+    public static Contact createContact(User user, User targetUser, String customName, String customImageUrl) {
+        Contact contact = new Contact();
+        contact.user = user;
+        contact.targetUser = targetUser;
+        contact.contactName = customName;
+        contact.profileImageUrl = customImageUrl;
+
+        // 생성 시각
+        contact.createdAt = Instant.now();
+
+        return contact;
+    }
+
+    public void updateLastContactedAt() {
+        this.lastContactedAt = Instant.now();
+    }
 }

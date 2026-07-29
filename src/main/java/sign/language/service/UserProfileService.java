@@ -23,7 +23,7 @@ public class UserProfileService {
     public UserProfileResponse getUserProfileByEmail(String email) {
         // 이메일로 회원 조회 (없을 경우 404 예외)
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserProfileException(ErrorStatus.MEMBER_NOT_FOUND)); // USER404
+                .orElseThrow(() -> new UserProfileException(ErrorStatus.DELETED_MEMBER));
 
         // 프로필 이미지가 없으면 yml의 기본 이미지 URL 사용
         String imageUrl = (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isBlank())
@@ -43,7 +43,7 @@ public class UserProfileService {
     // 특정 사용자 프로필 조회 (userId 기반)
     public UserProfileResponse getUserProfileByUserId(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserProfileException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new UserProfileException(ErrorStatus.DELETED_MEMBER));
 
         // 프로필 이미지가 없으면 yml의 기본 이미지 URL 사용
         String imageUrl = (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isBlank())

@@ -17,6 +17,7 @@ public enum ErrorStatus {
 
     // 매개변수 누락
     EMPTY_PARAMETER(HttpStatus.BAD_REQUEST, "PARAM400", "필수 요청 매개변수가 누락되었습니다."),
+    PAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON404", "요청하신 URL 경로를 찾을 수 없습니다."),
 
     // 회원, 프로필
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER404", "존재하지 않는 회원입니다."),
@@ -25,6 +26,7 @@ public enum ErrorStatus {
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "MEMBER401", "비밀번호가 일치하지 않습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "MEMBER400_FORMAT", "입력값 형식이 올바르지 않습니다."),
     LOGOUT_FAILED(HttpStatus.BAD_REQUEST, "MEMBER400_LOGOUT", "로그아웃 처리에 실패했습니다."),
+    DELETED_MEMBER(HttpStatus.NOT_FOUND, "MEMBER404_DELETED", "탈퇴한 회원입니다."),
 
     // 파일 / S3 관련 에러 코드
     INVALID_FILE(HttpStatus.NOT_FOUND, "FILE404", "유효하지 않거나 비어있는 파일입니다."),
@@ -38,7 +40,12 @@ public enum ErrorStatus {
 
     // 퀴즈 관련 에러 코드
     QUIZ_NOT_FOUND(HttpStatus.NOT_FOUND, "QUIZ404", "퀴즈가 존재하지 않습니다."),
-    QUIZ_INVALID_COUNT(HttpStatus.BAD_REQUEST, "QUIZ400", "퀴즈 요청 개수는 1개 이상 20개 이하여야 합니다.")
+    QUIZ_INVALID_COUNT(HttpStatus.BAD_REQUEST, "QUIZ400", "퀴즈 요청 개수는 1개 이상 20개 이하여야 합니다."),
+
+    // 연락처 관련 에러 코드
+    CANNOT_ADD_SELF(HttpStatus.BAD_REQUEST, "CONTACT400", "자기 자신을 추가할 수 없습니다."),
+    CONTACT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CONTACT409", "이미 등록된 연락처입니다."),
+    CONTACT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTACT404", "연락처가 존재하지 않습니다.")
     ;
 
     private final HttpStatus httpStatus;

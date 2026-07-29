@@ -36,7 +36,7 @@ public class LectureService {
      */
     public LecturePageResponse getLectures(String email, String categoryName, Pageable pageable) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new LectureException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new LectureException(ErrorStatus.DELETED_MEMBER));
 
         Page<Lecture> lecturePage;
         long completedCount;
@@ -75,7 +75,7 @@ public class LectureService {
      */
     public LectureResponse getLectureDetail(String email, Long lectureId) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new LectureException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new LectureException(ErrorStatus.DELETED_MEMBER));
 
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new LectureException(ErrorStatus.LECTURE_NOT_FOUND));
@@ -92,7 +92,7 @@ public class LectureService {
     @Transactional
     public LectureProgressResponse completeLecture(String email, Long lectureId) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new LectureException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new LectureException(ErrorStatus.DELETED_MEMBER));
 
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new LectureException(ErrorStatus.LECTURE_NOT_FOUND));

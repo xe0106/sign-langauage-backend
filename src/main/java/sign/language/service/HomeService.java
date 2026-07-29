@@ -22,7 +22,7 @@ public class HomeService {
 
     public HomeResponse getHomeData(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new SignException(ErrorStatus.DELETED_MEMBER));
 
         LocalDateTime now = LocalDateTime.now();
 

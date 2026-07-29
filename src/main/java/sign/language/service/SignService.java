@@ -80,7 +80,7 @@ public class SignService {
     @Transactional(readOnly = true)
     public SignResponse.SignInResult signIn(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new SignException(ErrorStatus.DELETED_MEMBER));
 
         if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new SignException(ErrorStatus.INVALID_PASSWORD);
@@ -105,7 +105,7 @@ public class SignService {
         redisService.deleteRefreshToken(email);
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new SignException(ErrorStatus.DELETED_MEMBER));
         user.setLogOut();
     }
 
@@ -113,7 +113,7 @@ public class SignService {
     @Transactional
     public void signOff(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new SignException(ErrorStatus.DELETED_MEMBER));
 
         if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new SignException(ErrorStatus.INVALID_PASSWORD);
@@ -127,7 +127,7 @@ public class SignService {
     @Transactional
     public void signModify(String email, ProfileModifyRequest request) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new SignException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new SignException(ErrorStatus.DELETED_MEMBER));
 
         // 닉네임 변경 요청이 있고, 기존 닉네임과 다를 때만 수행
         String newNickname = null;

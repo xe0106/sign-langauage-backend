@@ -1,15 +1,13 @@
 package sign.language.handler;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import sign.language.errorcode.ErrorStatus;
 import sign.language.exception.GeneralException;
 import sign.language.exception.SignException;
@@ -19,6 +17,13 @@ import java.nio.file.AccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
+        return ResponseEntity
+                .status(ErrorStatus.NOT_FOUND.getHttpStatus())
+                .body(ApiResponse.onFailure(ErrorStatus.PAGE_NOT_FOUND.getCode(), ErrorStatus.PAGE_NOT_FOUND.getMessage()));
+    }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException(

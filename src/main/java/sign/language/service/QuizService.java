@@ -49,7 +49,7 @@ public class QuizService {
     @Transactional
     public QuizSubmitResponse submitQuiz(String email, Long quizId, QuizSubmitRequest request) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new QuizException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new QuizException(ErrorStatus.DELETED_MEMBER));
 
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new QuizException(ErrorStatus.QUIZ_NOT_FOUND));

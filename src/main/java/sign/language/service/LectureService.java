@@ -48,7 +48,7 @@ public class LectureService {
         } else {
             try {
                 Category category = Category.valueOf(categoryName.toUpperCase());
-                lecturePage = lectureRepository.findByCategory(category, pageable);
+                lecturePage = lectureRepository.findByCategoryOrderByIdAsc(category, pageable);
                 completedCount = progressRepository.countCompletedByUserIdAndCategory(user.getId(), category);
             } catch (IllegalArgumentException e) {
                 // 지원하지 않는 카테고리 예외 (LECTURE400)

@@ -2,7 +2,9 @@ package sign.language.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import sign.language.request.QuizSubmitRequest;
 import sign.language.response.ApiResponse;
@@ -25,9 +27,10 @@ public class QuizController {
      */
     @GetMapping
     public ApiResponse<List<QuizResponse>> getQuizzes(
-            @RequestParam(name = "count", required = false, defaultValue = "5") Integer count
+            @AuthenticationPrincipal String email,
+            @RequestParam(required = false) Integer count
     ) {
-        List<QuizResponse> responses = quizService.getQuizzes(count);
+        List<QuizResponse> responses = quizService.getQuizzes(email, count);
         return ApiResponse.onSuccess(responses);
     }
 

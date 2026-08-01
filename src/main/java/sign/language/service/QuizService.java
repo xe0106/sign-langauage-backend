@@ -118,7 +118,7 @@ public class QuizService {
             user.recordQuizCorrect();
         }
 
-        // 3. 채점 완료 후 정답 Key 삭제
+        // 채점 완료 후 정답 Key 삭제
         redisTemplate.delete(redisKey);
 
         return QuizSubmitResponse.of(quizId, isCorrect, correctOptionIndex, explanation);

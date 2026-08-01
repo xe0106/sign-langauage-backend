@@ -43,7 +43,7 @@ public class LectureService {
 
         // 카테고리 조건 분기
         if (categoryName == null || categoryName.isBlank() || "ALL".equalsIgnoreCase(categoryName)) {
-            lecturePage = lectureRepository.findAll(pageable);
+            lecturePage = lectureRepository.findAllByOrderByIdAsc(pageable);
             completedCount = progressRepository.countCompletedByUserId(user.getId());
         } else {
             try {

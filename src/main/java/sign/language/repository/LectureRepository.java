@@ -13,7 +13,7 @@ import java.util.List;
 public interface LectureRepository extends JpaRepository<Lecture, Long> {
 
     // 전체 강의 페이징 조회
-    Page<Lecture> findAll(Pageable pageable);
+    Page<Lecture> findAllByOrderByIdAsc(Pageable pageable);
 
     // 카테고리별 강의 페이징 조회
     Page<Lecture> findByCategoryOrderByIdAsc(Category category, Pageable pageable);

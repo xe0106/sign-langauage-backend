@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import sign.language.dto.ContactResponse;
@@ -44,14 +43,13 @@ public class ContactController {
      * 새로운 연락처(친구) 추가
      * POST /sign/language/contacts/insert/{userId}
      */
-    @PostMapping("/insert/{targetUserId}")
+    @PostMapping("/insert")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ContactCreateResponse> addContact(
             @AuthenticationPrincipal String email,
-            @PathVariable Long targetUserId,
             @Valid @RequestBody ContactRequest request
     ) {
-        ContactCreateResponse response = contactService.addContact(email, request, targetUserId);
+        ContactCreateResponse response = contactService.addContact(email, request);
         return ApiResponse.onSuccess(response);
     }
 

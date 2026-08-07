@@ -53,6 +53,11 @@ public class SignService {
             throw new SignException(ErrorStatus.DUPLICATE_EMAIL);
         }
 
+        // 전화번호 중복 검사
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new SignException(ErrorStatus.DUPLICATE_PHONE_NUMBER);
+        }
+
         // 이중 검사
         checkNicknameDuplicate(request.getNickname());
 

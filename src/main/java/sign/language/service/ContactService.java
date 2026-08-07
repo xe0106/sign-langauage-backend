@@ -72,16 +72,16 @@ public class ContactService {
      * 새로운 연락처(친구) 추가
      */
     @Transactional
-    public ContactCreateResponse addContact(String email, ContactRequest request, Long contactId) {
+    public ContactCreateResponse addContact(String email, ContactRequest request) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ContactException(ErrorStatus.DELETED_MEMBER));
 
-        if (user.getId().equals(contactId)) {
+        User targetUser = userRepository.findByPhoneNumber(request.getPhoneNumber())
+                .orElseThrow(() -> new ContactException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        if (user.getId().equals(targetUser.getId())) {
             throw new ContactException(ErrorStatus.CANNOT_ADD_SELF);
         }
-
-        User targetUser = userRepository.findById(contactId)
-                .orElseThrow(() -> new ContactException(ErrorStatus.MEMBER_NOT_FOUND));
 
         if (contactRepository.existsByUserIdAndTargetUserId(user.getId(), targetUser.getId())) {
             throw new ContactException(ErrorStatus.CONTACT_ALREADY_EXISTS);

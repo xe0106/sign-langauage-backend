@@ -44,7 +44,6 @@ public class ContactController {
      * POST /sign/language/contacts/insert/{userId}
      */
     @PostMapping("/insert")
-    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ContactCreateResponse> addContact(
             @AuthenticationPrincipal String email,
             @Valid @RequestBody ContactRequest request

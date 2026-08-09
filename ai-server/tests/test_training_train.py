@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from mindvoice_ai.settings import FEATURE_DIMENSION, SEQUENCE_LENGTH
+from mindvoice_ai.inference.package import load_model_package
 from mindvoice_ai.training.train import train_model
 
 
@@ -49,3 +50,5 @@ def test_train_model_creates_versioned_artifact_package(tmp_path: Path) -> None:
     assert len(metadata["datasetSha256"]) == 64
     assert metadata["labels"][1]["stableKey"] == "NO_SIGN"
     assert report["testSamples"] == 2
+    package = load_model_package(output_dir)
+    assert package.metadata.modelVersion == "test-v1"

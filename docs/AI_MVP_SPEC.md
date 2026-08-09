@@ -86,6 +86,11 @@ During buffer warm-up:
 }
 ```
 
+After warm-up, windows that have not yet met the confidence and consecutive
+prediction requirements return the same status envelope with
+`"status": "analyzing"`. If no valid model package is configured, the status is
+`"model_unavailable"`.
+
 Stable prediction:
 
 ```json

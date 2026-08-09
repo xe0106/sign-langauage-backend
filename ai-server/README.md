@@ -87,3 +87,19 @@ includes the model SHA-256 digest. Evaluation reports macro F1, per-class
 metrics, the confusion matrix, and mean CPU inference time per window. These
 generated artifacts are intentionally ignored by Git. Existing version files
 are not overwritten unless `--overwrite` is supplied explicitly.
+
+## Serving a trained model
+
+Set the model package directory before starting the API service:
+
+```bash
+export MINDVOICE_MODEL_DIR=artifacts/ksl-word-v0.1.0
+uvicorn mindvoice_ai.app:app --app-dir src
+```
+
+On Windows PowerShell, use `$env:MINDVOICE_MODEL_DIR` instead of `export`.
+`GET /health` reports the loaded model version or the package validation error.
+After the 30-frame warm-up, the WebSocket reports `analyzing` until the same
+confident public class is observed for the configured number of windows. A
+stable prediction is emitted once, and remains suppressed until `NO_SIGN` or a
+different stable class releases it.

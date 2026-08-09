@@ -29,7 +29,7 @@ class LandmarkFrame(BaseModel):
 
 class BufferStatus(BaseModel):
     type: Literal["status"] = "status"
-    status: Literal["warming_up", "model_unavailable"]
+    status: Literal["warming_up", "analyzing", "model_unavailable"]
     bufferedFrames: int = Field(ge=0)
     requiredFrames: int = SEQUENCE_LENGTH
 
@@ -38,3 +38,16 @@ class ErrorMessage(BaseModel):
     type: Literal["error"] = "error"
     code: str
     message: str
+
+
+class PredictionMessage(BaseModel):
+    type: Literal["prediction"] = "prediction"
+    sessionId: UUID
+    callId: UUID | None = None
+    classId: int = Field(ge=0)
+    label: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    stable: Literal[True] = True
+    startTimeMs: int = Field(ge=0)
+    endTimeMs: int = Field(ge=0)
+    modelVersion: str

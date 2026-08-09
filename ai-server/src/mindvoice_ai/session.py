@@ -19,6 +19,7 @@ class SessionBuffer:
         default_factory=lambda: deque(maxlen=SEQUENCE_LENGTH)
     )
     last_sequence: int = -1
+    stabilizer: object | None = None
 
     def append(self, frame: SequencedFrame) -> bool:
         if frame.sequence <= self.last_sequence:

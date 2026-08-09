@@ -36,11 +36,17 @@ def train_model(
     patience: int = 12,
     seed: int = 42,
     overwrite: bool = False,
+    confidence_threshold: float = 0.9,
+    stable_window_count: int = 3,
 ) -> dict[str, Any]:
     if not model_version.strip():
         raise ValueError("model_version must not be empty")
     if epochs <= 0 or batch_size <= 0 or patience < 0:
         raise ValueError("epochs and batch_size must be positive; patience cannot be negative")
+    if not 0.0 <= confidence_threshold <= 1.0:
+        raise ValueError("confidence_threshold must be between 0 and 1")
+    if stable_window_count <= 0:
+        raise ValueError("stable_window_count must be positive")
 
     artifact_paths = [
         output_dir / "model.keras",
@@ -59,6 +65,8 @@ def train_model(
     np.random.seed(seed)
     tf.keras.utils.set_random_seed(seed)
     dataset = load_training_dataset(dataset_path)
+    if "NO_SIGN" not in dataset.label_keys:
+        raise ValueError("training dataset must contain the NO_SIGN class")
     x_train, y_train = dataset.split("train")
     x_validation, y_validation = dataset.split("validation")
     x_test, y_test = dataset.split("test")
@@ -131,6 +139,9 @@ def train_model(
         "featureDimension": FEATURE_DIMENSION,
         "featureOrder": "pose_33x(x,y,z,visibility),left_hand_21x(x,y,z),right_hand_21x(x,y,z)",
         "normalization": "shoulder_center_and_width_v1",
+        "confidenceThreshold": confidence_threshold,
+        "stableWindowCount": stable_window_count,
+        "noSignStableKey": "NO_SIGN",
         "labels": [
             {"classId": index, "stableKey": key, "label": dataset.label_names[index]}
             for index, key in enumerate(dataset.label_keys)
@@ -166,6 +177,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patience", type=int, default=12)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--confidence-threshold", type=float, default=0.9)
+    parser.add_argument("--stable-window-count", type=int, default=3)
     return parser.parse_args()
 
 
@@ -180,6 +193,8 @@ def main() -> None:
         patience=args.patience,
         seed=args.seed,
         overwrite=args.overwrite,
+        confidence_threshold=args.confidence_threshold,
+        stable_window_count=args.stable_window_count,
     )
     print(json.dumps(report, ensure_ascii=False))
 

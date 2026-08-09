@@ -26,6 +26,12 @@ def test_health_reports_model_unavailable() -> None:
     assert response.json()["modelStatus"] == "unavailable"
 
 
+def test_readiness_fails_without_model() -> None:
+    response = client.get("/ready")
+
+    assert response.status_code == 503
+
+
 def test_websocket_warms_up_then_reports_missing_model() -> None:
     session_id = str(uuid4())
 

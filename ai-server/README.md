@@ -116,6 +116,24 @@ The Keras model runs a zero-window warm-up during package loading. Inference is
 bounded by a semaphore and timeout, stale session buffers are removed after the
 TTL, and `/health` reports the current active-session count.
 
+`GET /health` is a liveness check and remains available while the model is
+missing. `GET /ready` returns 200 only after a valid model package has loaded,
+so deployment traffic must use `/ready` for readiness decisions.
+
+## Container deployment
+
+Build and run with a versioned model package mounted read-only:
+
+```bash
+cd ai-server
+MINDVOICE_MODEL_PACKAGE=./artifacts/ksl-word-v0.1.0 docker compose up --build
+```
+
+PowerShell can set `MINDVOICE_MODEL_PACKAGE` with `$env:` before running Docker
+Compose. The image runs as an unprivileged user and contains serving-only
+TensorFlow dependencies; datasets, training tools, local models, and API keys
+are excluded from the build context.
+
 ## KCISA daily sign-language catalog
 
 The KCISA API key must be supplied only through the environment. Never place it

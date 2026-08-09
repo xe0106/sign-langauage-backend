@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 import numpy as np
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
 from . import __version__
@@ -97,6 +97,16 @@ def create_app(
         if application.state.model_error:
             response["modelError"] = application.state.model_error
         return response
+
+    @application.get("/ready")
+    async def ready() -> dict[str, object]:
+        active_predictor = application.state.predictor
+        if active_predictor is None:
+            raise HTTPException(status_code=503, detail="model is unavailable")
+        return {
+            "status": "ready",
+            "modelVersion": active_predictor.metadata.modelVersion,
+        }
 
     @application.websocket("/ws/inference")
     async def inference_socket(websocket: WebSocket) -> None:

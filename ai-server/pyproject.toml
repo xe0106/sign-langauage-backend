@@ -15,6 +15,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+serving = [
+    "tensorflow>=2.17,<3; platform_system != 'Darwin' or platform_machine != 'arm64'",
+]
 training = [
     "mediapipe>=0.10,<1",
     "scikit-learn>=1.5,<2",

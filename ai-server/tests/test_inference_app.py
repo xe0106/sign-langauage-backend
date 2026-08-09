@@ -58,6 +58,9 @@ def test_health_reports_loaded_model_version() -> None:
 
     assert response["modelStatus"] == "available"
     assert response["modelVersion"] == "fake-v1"
+    readiness = client.get("/ready")
+    assert readiness.status_code == 200
+    assert readiness.json()["modelVersion"] == "fake-v1"
 
 
 def test_websocket_emits_only_stable_prediction() -> None:

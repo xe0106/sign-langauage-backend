@@ -105,7 +105,17 @@ function renderInstruction() {
   if (item.stableKey === "NO_SIGN") {
     $("#instruction").textContent = `NO_SIGN 예시: ${noSignPrompts[(state.selectedRepetition - 1) % noSignPrompts.length]}`;
   } else {
-    $("#instruction").textContent = `${item.label}: 대기 자세 → 수어 동작 → 대기 자세를 녹화 시간 안에 수행하세요.`;
+    const instruction = $("#instruction");
+    instruction.textContent = `${item.label}: 대기 자세 → 수어 동작 → 대기 자세를 녹화 시간 안에 수행하세요. `;
+
+    if (item.link) {
+      const exampleLink = document.createElement("a");
+      exampleLink.href = item.link;
+      exampleLink.target = "_blank";
+      exampleLink.rel = "noopener noreferrer";
+      exampleLink.textContent = "예시 영상 보기";
+      instruction.append(exampleLink);
+    }
   }
 }
 

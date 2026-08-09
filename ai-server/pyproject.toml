@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mindvoice-ai"
+version = "0.1.0"
+description = "Korean Sign Language landmark inference service"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "numpy>=1.26,<3",
+    "pydantic>=2.9,<3",
+    "uvicorn[standard]>=0.30,<1",
+]
+
+[project.optional-dependencies]
+training = [
+    "mediapipe>=0.10,<1",
+    "scikit-learn>=1.5,<2",
+    "tensorflow>=2.17,<3; platform_system != 'Darwin' or platform_machine != 'arm64'",
+]
+dev = [
+    "httpx>=0.28,<1",
+    "pytest>=8,<9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,19 @@
+{
+  "modelVersion": "ksl-word-v0.1.0",
+  "sequenceLength": 30,
+  "featureDimension": 258,
+  "confidenceThreshold": 0.9,
+  "stableWindowCount": 3,
+  "labels": [
+    "안녕하세요",
+    "감사합니다",
+    "미안합니다",
+    "괜찮습니다",
+    "좋습니다",
+    "싫습니다",
+    "나",
+    "너",
+    "만나다",
+    "가다"
+  ]
+}

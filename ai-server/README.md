@@ -122,3 +122,20 @@ permit downloading and model training. The catalog does not expose signer IDs,
 so generated rows use `KCISA_UNKNOWN` and train-only assignment. These dictionary
 clips are useful references and seed samples, but cannot provide a valid
 signer-independent validation or test set by themselves.
+
+## Dataset quality audit
+
+Audit collected videos before and after MediaPipe preprocessing:
+
+```bash
+python -m mindvoice_ai.dataset.audit \
+  --manifest data/collection/manifest.csv \
+  --processed-index data/processed/dataset-index.jsonl \
+  --expected-repetitions 20 \
+  --output data/reports/dataset-audit.json
+```
+
+The report checks per-signer class counts, duplicate content, duration,
+resolution, FPS, split distribution, missing processed samples, and pose/hand
+detection rates. Errors block dataset acceptance; warnings identify clips for
+manual review or re-recording.

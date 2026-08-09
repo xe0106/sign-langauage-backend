@@ -25,3 +25,19 @@ ws://localhost:8000/ws/inference
 ```
 
 See `docs/AI_MVP_SPEC.md` for the feature order and message contract.
+
+## Video preprocessing
+
+Place the official MediaPipe `holistic_landmarker.task` file under `models/`, then run:
+
+```bash
+python -m mindvoice_ai.preprocessing.video \
+  --input sample.mp4 \
+  --output data/HELLO/S001/sample-001.npz \
+  --model models/holistic_landmarker.task \
+  --label "안녕하세요" \
+  --stable-key HELLO \
+  --signer-id S001
+```
+
+Each NPZ contains normalized `features` with shape `(frames, 258)`, landmark presence flags, timestamps, and JSON metadata. Raw videos and generated datasets are ignored by Git.

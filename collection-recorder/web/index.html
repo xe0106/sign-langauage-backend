@@ -1,137 +1,179 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MindVoice 수어 데이터 녹화</title>
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body>
-    <header>
-      <div>
-        <p class="eyebrow">MINDVOICE DATA COLLECTION</p>
-        <h1>수어 영상 녹화 도구</h1>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MindVoice 수어 데이터 녹화</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">MINDVOICE DATA COLLECTION</p>
+      <h1>수어 영상 녹화 도구</h1>
+    </div>
+    <div id="server-status" class="status-pill">로컬 저장 서버 확인 중</div>
+  </header>
+
+  <main>
+    <aside class="panel settings-panel">
+      <h2>촬영 설정</h2>
+      <label>
+        촬영자 ID
+        <select id="signer-id">
+          <option value="S001">김민규 </option>
+          <option value="S002">김세연 </option>
+          <option value="S003">박성호 </option>
+          <option value="S004">배정환 </option>
+          <option value="S005">유희진 </option>
+          <option value="S006">이강준 </option>
+          <option value="S007">장서윤 </option>
+          <option value="S008">조용국 </option>
+        </select>
+      </label>
+      <label>
+        촬영 세션
+        <select id="session-number">
+          <option value="1">1차 · 반복 01~10</option>
+          <option value="2">2차 · 반복 11~20</option>
+        </select>
+      </label>
+      <div class="two-columns">
+        <label>
+          준비 시간
+          <select id="prep-seconds">
+            <option value="2">2초</option>
+            <option value="3">3초</option>
+          </select>
+        </label>
+        <label>
+          녹화 시간
+          <select id="record-seconds">
+            <option value="3">3초</option>
+            <option value="4" selected>4초</option>
+          </select>
+        </label>
       </div>
-      <div id="server-status" class="status-pill">로컬 저장 서버 확인 중</div>
-    </header>
+      <label>
+        카메라
+        <select id="camera-select">
+          <option value="">기본 카메라</option>
+        </select>
+      </label>
+      <button id="camera-button" class="secondary">카메라 시작</button>
 
-    <main>
-      <aside class="panel settings-panel">
-        <h2>촬영 설정</h2>
-        <label>
-          촬영자 ID
-          <select id="signer-id">
-            <option value="S001">S001 · train</option>
-            <option value="S002">S002 · train</option>
-            <option value="S003">S003 · train</option>
-            <option value="S004">S004 · train</option>
-            <option value="S005">S005 · validation</option>
-            <option value="S006">S006 · test</option>
-          </select>
-        </label>
-        <label>
-          촬영 세션
-          <select id="session-number">
-            <option value="1">1차 · 반복 01~10</option>
-            <option value="2">2차 · 반복 11~20</option>
-          </select>
-        </label>
-        <div class="two-columns">
-          <label>
-            준비 시간
-            <select id="prep-seconds">
-              <option value="2">2초</option>
-              <option value="3">3초</option>
-            </select>
-          </label>
-          <label>
-            녹화 시간
-            <select id="record-seconds">
-              <option value="3">3초</option>
-              <option value="4" selected>4초</option>
-            </select>
-          </label>
+      <div class="summary-card">
+        <span>전체 진행률</span>
+        <strong id="total-progress">0 / 220</strong>
+        <div class="progress-track">
+          <div id="progress-fill"></div>
         </div>
-        <label>
-          카메라
-          <select id="camera-select">
-            <option value="">기본 카메라</option>
-          </select>
-        </label>
-        <button id="camera-button" class="secondary">카메라 시작</button>
+      </div>
 
-        <div class="summary-card">
-          <span>전체 진행률</span>
-          <strong id="total-progress">0 / 220</strong>
-          <div class="progress-track"><div id="progress-fill"></div></div>
+      <h2>수어 목록</h2>
+      <nav id="class-list" class="class-list"></nav>
+    </aside>
+
+    <section class="workspace">
+      <div class="panel preview-panel">
+        <div class="preview-heading">
+          <div>
+            <p id="stable-key" class="eyebrow">HELLO</p>
+            <h2 id="class-label">안녕하세요</h2>
+          </div>
+          <div id="class-progress" class="class-count">0 / 20</div>
         </div>
 
-        <h2>수어 목록</h2>
-        <nav id="class-list" class="class-list"></nav>
-      </aside>
-
-      <section class="workspace">
-        <div class="panel preview-panel">
-          <div class="preview-heading">
-            <div>
-              <p id="stable-key" class="eyebrow">HELLO</p>
-              <h2 id="class-label">안녕하세요</h2>
-            </div>
-            <div id="class-progress" class="class-count">0 / 20</div>
+        <div class="video-shell">
+          <video id="preview" autoplay muted playsinline></video>
+          <div id="camera-placeholder">
+            <strong>카메라를 시작해 주세요</strong>
+            <span>영상은 이 컴퓨터에만 저장됩니다.</span>
           </div>
-
-          <div class="video-shell">
-            <video id="preview" autoplay muted playsinline></video>
-            <div id="camera-placeholder">
-              <strong>카메라를 시작해 주세요</strong>
-              <span>영상은 이 컴퓨터에만 저장됩니다.</span>
-            </div>
-            <div id="countdown" class="countdown hidden"></div>
-            <div id="recording-indicator" class="recording hidden">
-              <span></span> REC
-            </div>
+          <div id="countdown" class="countdown hidden"></div>
+          <div id="recording-indicator" class="recording hidden">
+            <span></span> REC
           </div>
-
-          <div id="instruction" class="instruction">
-            상반신과 양손이 화면 안에 들어오는지 확인하세요.
-          </div>
-
-          <div class="control-row">
-            <button id="record-one" disabled>선택 반복 1개 촬영</button>
-            <button id="record-session" disabled>현재 수어 10개 자동 촬영</button>
-            <button id="stop-auto" class="danger hidden">자동 촬영 중단</button>
-          </div>
-          <p id="message" class="message">카메라 시작 후 촬영할 수 있습니다.</p>
         </div>
 
-        <div class="panel repetitions-panel">
-          <div class="preview-heading">
-            <div>
-              <h2>반복 영상</h2>
-              <p>완료된 번호를 선택하면 해당 영상을 다시 촬영할 수 있습니다.</p>
-            </div>
-            <button id="delete-recording" class="text-button" disabled>선택 영상 삭제</button>
-          </div>
-          <div id="repetition-grid" class="repetition-grid"></div>
+        <div id="instruction" class="instruction">
+          상반신과 양손이 화면 안에 들어오는지 확인하세요.
         </div>
 
-        <details class="panel guide-panel">
-          <summary>촬영 가이드와 NO_SIGN 예시</summary>
-          <div class="guide-content">
-            <ul>
-              <li>정면을 보고 상반신과 양손을 항상 화면 안에 둡니다.</li>
-              <li>대기 자세 → 수어 → 대기 자세 순서로 수행합니다.</li>
-              <li>각 10회 안에서 빠르게·보통·느리게 속도를 섞습니다.</li>
-              <li>2차 세션은 가능하면 옷·조명·배경을 조금 바꿉니다.</li>
-              <li>동작을 틀렸다면 완료 번호를 선택해 즉시 다시 촬영합니다.</li>
-            </ul>
-            <p><strong>NO_SIGN:</strong> 가만히 있기, 얼굴 만지기, 옷 정리, 일반적인 손짓,
-              수어 시작 준비, 손 내리기, 화면 밖으로 손 이동을 골고루 촬영하세요.</p>
-          </div>
-        </details>
-      </section>
-    </main>
+        <div class="control-row">
+          <button id="record-one" disabled>선택 반복 1개 촬영</button>
+          <button id="record-session" disabled>현재 수어 10개 자동 촬영</button>
+          <button id="stop-auto" class="danger hidden">자동 촬영 중단</button>
+        </div>
+        <p id="message" class="message">카메라 시작 후 촬영할 수 있습니다.</p>
+      </div>
 
-    <script src="/app.js" defer></script>
-  </body>
+      <div class="panel repetitions-panel">
+        <div class="preview-heading">
+          <div>
+            <h2>반복 영상</h2>
+            <p>완료된 번호를 선택하면 해당 영상을 다시 촬영할 수 있습니다.</p>
+          </div>
+          <button id="delete-recording" class="text-button" disabled>선택 영상 삭제</button>
+        </div>
+        <div id="repetition-grid" class="repetition-grid"></div>
+      </div>
+
+      <details class="panel guide-panel">
+        <summary>촬영 가이드와 NO_SIGN 예시</summary>
+        <div class="guide-content">
+          <ul>
+            <li>정면을 보고 상반신과 양손을 항상 화면 안에 둡니다.</li>
+            <li>대기 자세 → 수어 → 대기 자세 순서로 수행합니다.</li>
+            <li>각 10회 안에서 빠르게·보통·느리게 속도를 섞습니다.</li>
+            <li>2차 세션은 가능하면 옷·조명·배경을 조금 바꿉니다.</li>
+            <li>동작을 틀렸다면 완료 번호를 선택해 즉시 다시 촬영합니다.</li>
+          </ul>
+          <p><strong>NO_SIGN:</strong> NO_SIGN(비수어 동작)은 표정만을 뜻하는 게 아니라, 모델이 10개 학습 단어 중 어느 것도 아니라고 판단해야 하는 모든 상황을 의미합니다.
+
+            예시는 다음과 같습니다.
+
+            - 아무 동작 없이 가만히 있기
+            - 손을 내리고 대화하기
+            - 머리카락이나 얼굴 만지기
+            - 안경 고치기
+            - 옷 정리하기
+            - 기지개 켜기
+            - 손 흔들기
+            - 박수 치기
+            - 화면이나 물건 가리키기
+            - 컵이나 휴대전화 들기
+            - 손을 화면 밖으로 움직이기
+            - 수어 시작 전 준비 동작
+            - 수어가 끝난 뒤 손을 내리는 동작
+            - 10개 학습 단어에 포함되지 않은 다른 수어
+
+            표정 변화도 NO_SIGN 영상에 자연스럽게 포함될 수 있지만, 표정만 여러 번 촬영하는 것은 부족합니다. 모델 입력에 손·포즈·
+            얼굴 좌표가 모두 포함되므로 일상적인 손과 몸의 움직임을 다양하게 넣는 것이 중요합니다.
+
+            촬영자당 NO_SIGN 20개는 예를 들어 이렇게 나눌 수 있습니다.
+
+            - 정지 또는 대화 자세: 3개
+            - 얼굴·머리·안경 만지기: 3개
+            - 옷이나 소지품 정리: 3개
+            - 일반적인 손짓: 4개
+            - 물건 들거나 내려놓기: 3개
+            - 수어 준비·종료와 비슷한 동작: 2개
+            - 학습 대상이 아닌 다른 수어: 2개
+
+            특히 “학습 대상이 아닌 다른 수어”는 중요합니다. 이것이 없으면 모델이 모르는 수어를 가장 비슷한 10개 단어 중 하나로 억
+            지로 분류할 가능성이 높습니다.
+
+            다만 NO_SIGN에 20종류를 고정하여 모든 촬영자가 똑같이 따라 하기보다는, 항목별 유형만 제시하고 각자 자연스럽게 수행하게
+            하는 편이 일반화에 유리합니다.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+
 </html>

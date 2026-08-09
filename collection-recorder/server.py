@@ -45,7 +45,7 @@ CLASSES = [
     {"classId": 7, "label": "너", "stableKey": "YOU", "link": "https://www.youtube.com/shorts/R1c8DVsQtiA"},
     {"classId": 8, "label": "만나다", "stableKey": "MEET", "link": "https://www.youtube.com/shorts/b7wxpBtVlKw"},
     {"classId": 9, "label": "가다", "stableKey": "GO", "link": "https://www.youtube.com/shorts/2dVjEmWqey4"},
-    {"classId": 10, "label": "비수어 동작", "stableKey": "NO_SIGN", "link": "https://github.com/xe0106/sign-langauage-backend/blob/yonggukcho/collection-recorder/no_sign%20%EC%84%A4%EB%AA%85.txt"},
+    {"classId": 10, "label": "비수어 동작", "stableKey": "NO_SIGN", "link": "https://github.com/xe0106/sign-langauage-backend/blob/yonggukcho/collection-recorder/no_sign_guide.txt"},
 ]
 CLASS_BY_KEY = {item["stableKey"]: item for item in CLASSES}
 manifest_lock = threading.Lock()

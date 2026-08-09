@@ -29,6 +29,12 @@ class KerasPredictor:
         package = load_model_package(package_dir)
         self._model = package.model
         self.metadata = package.metadata
+        warmup = np.zeros(
+            (1, SEQUENCE_LENGTH, FEATURE_DIMENSION), dtype=np.float32
+        )
+        output = np.asarray(self._model(warmup, training=False))
+        if output.shape != (1, len(self.metadata.labels)) or not np.isfinite(output).all():
+            raise ValueError("model warm-up returned an invalid probability vector")
 
     def predict(self, features: np.ndarray) -> RawPrediction:
         if features.shape != (SEQUENCE_LENGTH, FEATURE_DIMENSION):

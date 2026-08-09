@@ -22,11 +22,50 @@ from .session import SessionStore
 from .settings import SEQUENCE_LENGTH
 
 MODEL_DIR_ENV = "MINDVOICE_MODEL_DIR"
+INFERENCE_TIMEOUT_ENV = "MINDVOICE_INFERENCE_TIMEOUT_SECONDS"
+MAX_CONCURRENCY_ENV = "MINDVOICE_MAX_CONCURRENT_INFERENCES"
+SESSION_TTL_ENV = "MINDVOICE_SESSION_TTL_SECONDS"
+
+
+async def _predict_with_limits(
+    predictor: Predictor,
+    window: np.ndarray,
+    slots: asyncio.Semaphore,
+    timeout_seconds: float,
+):
+    await slots.acquire()
+    task = asyncio.create_task(asyncio.to_thread(predictor.predict, window))
+    try:
+        result = await asyncio.wait_for(asyncio.shield(task), timeout=timeout_seconds)
+    except BaseException:
+        if task.done():
+            slots.release()
+        else:
+            task.add_done_callback(lambda _: slots.release())
+        raise
+    else:
+        slots.release()
+        return result
 
 
 def create_app(
-    predictor: Predictor | None = None, *, auto_load_model: bool = True
+    predictor: Predictor | None = None,
+    *,
+    auto_load_model: bool = True,
+    inference_timeout_seconds: float | None = None,
+    max_concurrent_inferences: int | None = None,
+    session_ttl_seconds: float | None = None,
 ) -> FastAPI:
+    if inference_timeout_seconds is None:
+        inference_timeout_seconds = float(os.getenv(INFERENCE_TIMEOUT_ENV, "1.0"))
+    if max_concurrent_inferences is None:
+        max_concurrent_inferences = int(os.getenv(MAX_CONCURRENCY_ENV, "2"))
+    if session_ttl_seconds is None:
+        session_ttl_seconds = float(os.getenv(SESSION_TTL_ENV, "300"))
+    if inference_timeout_seconds <= 0:
+        raise ValueError("inference_timeout_seconds must be positive")
+    if max_concurrent_inferences <= 0:
+        raise ValueError("max_concurrent_inferences must be positive")
     model_error: str | None = None
     if predictor is None and auto_load_model:
         configured_dir = os.getenv(MODEL_DIR_ENV)
@@ -37,9 +76,11 @@ def create_app(
                 model_error = f"{type(error).__name__}: {error}"
 
     application = FastAPI(title="Mind Voice AI Service", version=__version__)
-    sessions = SessionStore()
+    sessions = SessionStore(ttl_seconds=session_ttl_seconds)
+    inference_slots = asyncio.Semaphore(max_concurrent_inferences)
     application.state.predictor = predictor
     application.state.model_error = model_error
+    application.state.sessions = sessions
 
     @application.get("/health")
     async def health() -> dict[str, object]:
@@ -49,6 +90,7 @@ def create_app(
             "service": "mindvoice-ai",
             "version": __version__,
             "modelStatus": "available" if active_predictor else "unavailable",
+            "activeSessions": len(sessions),
         }
         if active_predictor:
             response["modelVersion"] = active_predictor.metadata.modelVersion
@@ -121,10 +163,20 @@ def create_app(
                     window = np.asarray(
                         [item.features for item in buffer.frames], dtype=np.float32
                     )
-                    prediction = await asyncio.to_thread(
-                        active_predictor.predict, window
+                    prediction = await _predict_with_limits(
+                        active_predictor,
+                        window,
+                        inference_slots,
+                        inference_timeout_seconds,
                     )
                     stable_prediction = buffer.stabilizer.observe(prediction)
+                except TimeoutError:
+                    response = ErrorMessage(
+                        code="INFERENCE_TIMEOUT",
+                        message="model inference exceeded the configured timeout",
+                    )
+                    await websocket.send_json(response.model_dump(mode="json"))
+                    continue
                 except Exception as error:
                     response = ErrorMessage(
                         code="INFERENCE_FAILED",

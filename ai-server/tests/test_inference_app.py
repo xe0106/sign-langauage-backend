@@ -1,8 +1,13 @@
 from uuid import uuid4
+import asyncio
+import threading
+import time
+
+import numpy as np
 
 from fastapi.testclient import TestClient
 
-from mindvoice_ai.app import create_app
+from mindvoice_ai.app import _predict_with_limits, create_app
 from mindvoice_ai.inference.package import ModelMetadata
 from mindvoice_ai.inference.predictor import RawPrediction
 from mindvoice_ai.settings import FEATURE_DIMENSION, SEQUENCE_LENGTH
@@ -90,3 +95,61 @@ def test_invalid_json_does_not_close_websocket() -> None:
 
     assert error["code"] == "INVALID_JSON"
     assert status["status"] == "warming_up"
+
+
+def test_slow_inference_returns_timeout_without_closing_socket() -> None:
+    hello = RawPrediction(0, "HELLO", "안녕하세요", 0.96)
+    predictor = FakePredictor([hello, hello])
+    original_predict = predictor.predict
+
+    def slow_predict(features):
+        time.sleep(0.05)
+        return original_predict(features)
+
+    predictor.predict = slow_predict
+    client = TestClient(
+        create_app(
+            predictor,
+            auto_load_model=False,
+            inference_timeout_seconds=0.01,
+        )
+    )
+    session_id = str(uuid4())
+
+    with client.websocket_connect("/ws/inference") as websocket:
+        for sequence in range(SEQUENCE_LENGTH):
+            websocket.send_json(frame_payload(session_id, sequence))
+            response = websocket.receive_json()
+        assert response["code"] == "INFERENCE_TIMEOUT"
+        websocket.send_json(frame_payload(session_id, SEQUENCE_LENGTH))
+        assert websocket.receive_json()["code"] == "INFERENCE_TIMEOUT"
+
+
+def test_inference_semaphore_limits_worker_threads() -> None:
+    class CountingPredictor:
+        def __init__(self) -> None:
+            self.active = 0
+            self.maximum = 0
+            self.lock = threading.Lock()
+
+        def predict(self, features):
+            with self.lock:
+                self.active += 1
+                self.maximum = max(self.maximum, self.active)
+            time.sleep(0.02)
+            with self.lock:
+                self.active -= 1
+            return features
+
+    predictor = CountingPredictor()
+
+    async def run_predictions():
+        slots = asyncio.Semaphore(1)
+        window = np.zeros((SEQUENCE_LENGTH, FEATURE_DIMENSION), dtype=np.float32)
+        await asyncio.gather(
+            _predict_with_limits(predictor, window, slots, 1.0),
+            _predict_with_limits(predictor, window, slots, 1.0),
+        )
+
+    asyncio.run(run_predictions())
+    assert predictor.maximum == 1

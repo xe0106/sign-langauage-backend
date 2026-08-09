@@ -104,6 +104,18 @@ confident public class is observed for the configured number of windows. A
 stable prediction is emitted once, and remains suppressed until `NO_SIGN` or a
 different stable class releases it.
 
+Operational limits are configurable without code changes:
+
+```text
+MINDVOICE_INFERENCE_TIMEOUT_SECONDS=1.0
+MINDVOICE_MAX_CONCURRENT_INFERENCES=2
+MINDVOICE_SESSION_TTL_SECONDS=300
+```
+
+The Keras model runs a zero-window warm-up during package loading. Inference is
+bounded by a semaphore and timeout, stale session buffers are removed after the
+TTL, and `/health` reports the current active-session count.
+
 ## KCISA daily sign-language catalog
 
 The KCISA API key must be supplied only through the environment. Never place it

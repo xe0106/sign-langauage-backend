@@ -41,6 +41,18 @@ class SessionStoreTest(unittest.TestCase):
         self.assertFalse(older_accepted)
         self.assertEqual(1, len(buffer.frames))
 
+    def test_removes_sessions_after_idle_ttl(self) -> None:
+        now = [100.0]
+        store = SessionStore(ttl_seconds=10.0, clock=lambda: now[0])
+        first_session = uuid4()
+        store.append(make_frame(first_session, 0))
+
+        now[0] = 111.0
+        removed = store.remove_stale()
+
+        self.assertEqual(1, removed)
+        self.assertEqual(0, len(store))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ import numpy as np
 
 from mindvoice_ai.settings import FEATURE_DIMENSION, SEQUENCE_LENGTH
 from mindvoice_ai.inference.package import load_model_package
+from mindvoice_ai.inference.predictor import KerasPredictor
 from mindvoice_ai.training.train import train_model
 
 
@@ -52,3 +53,6 @@ def test_train_model_creates_versioned_artifact_package(tmp_path: Path) -> None:
     assert report["testSamples"] == 2
     package = load_model_package(output_dir)
     assert package.metadata.modelVersion == "test-v1"
+    predictor = KerasPredictor(output_dir)
+    prediction = predictor.predict(features[0])
+    assert prediction.stable_key in {"HELLO", "NO_SIGN"}

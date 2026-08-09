@@ -36,6 +36,8 @@ out/
 .vscode/
 
 ### AI service ###
+.env
+*.env
 ai-server/.venv/
 ai-server/.pytest_cache/
 ai-server/**/__pycache__/

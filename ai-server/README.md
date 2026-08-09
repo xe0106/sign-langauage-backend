@@ -103,3 +103,22 @@ After the 30-frame warm-up, the WebSocket reports `analyzing` until the same
 confident public class is observed for the configured number of windows. A
 stable prediction is emitted once, and remains suppressed until `NO_SIGN` or a
 different stable class releases it.
+
+## KCISA daily sign-language catalog
+
+The KCISA API key must be supplied only through the environment. Never place it
+in a manifest, command argument, source file, or commit:
+
+```powershell
+$env:KCISA_API_KEY = "your-issued-key"
+python -m mindvoice_ai.sources.kcisa `
+  --targets configs/kcisa-targets.json `
+  --output-dir data/kcisa-reference
+```
+
+This creates a curated manifest and `sources.jsonl` provenance record. Add
+`--download` only after confirming that the approved use and each item's rights
+permit downloading and model training. The catalog does not expose signer IDs,
+so generated rows use `KCISA_UNKNOWN` and train-only assignment. These dictionary
+clips are useful references and seed samples, but cannot provide a valid
+signer-independent validation or test set by themselves.

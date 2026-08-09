@@ -139,3 +139,20 @@ The report checks per-signer class counts, duplicate content, duration,
 resolution, FPS, split distribution, missing processed samples, and pose/hand
 detection rates. Errors block dataset acceptance; warnings identify clips for
 manual review or re-recording.
+
+## Signer cross-validation
+
+With six complete signers, evaluate every person as an unseen signer while a
+second person rotates through validation:
+
+```bash
+python -m mindvoice_ai.training.cross_validate \
+  --dataset data/training/dataset.npz \
+  --output data/reports/signer-cross-validation.json
+```
+
+The six folds each use four train signers, one validation signer, and one test
+signer. The report includes per-signer macro F1, accuracy, confusion matrices,
+inference latency, and aggregate mean, standard deviation, minimum, and maximum
+macro F1. This supplements the fixed 4/1/1 split; it does not replace a larger
+independent test population.

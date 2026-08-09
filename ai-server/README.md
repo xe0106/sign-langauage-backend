@@ -172,7 +172,7 @@ manual review or re-recording.
 
 ## Signer cross-validation
 
-With six complete signers, evaluate every person as an unseen signer while a
+With eight complete signers, evaluate every person as an unseen signer while a
 second person rotates through validation:
 
 ```bash
@@ -181,8 +181,8 @@ python -m mindvoice_ai.training.cross_validate \
   --output data/reports/signer-cross-validation.json
 ```
 
-The six folds each use four train signers, one validation signer, and one test
+The eight folds each use six train signers, one validation signer, and one test
 signer. The report includes per-signer macro F1, accuracy, confusion matrices,
 inference latency, and aggregate mean, standard deviation, minimum, and maximum
-macro F1. This supplements the fixed 4/1/1 split; it does not replace a larger
+macro F1. This supplements the fixed 4/2/2 split; it does not replace a larger
 independent test population.

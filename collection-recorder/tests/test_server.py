@@ -38,9 +38,11 @@ class RecorderServerTest(unittest.TestCase):
     def test_split_assignment_is_fixed_by_signer(self) -> None:
         self.assertEqual("train", server.split_for_signer("S001"))
         self.assertEqual("validation", server.split_for_signer("S005"))
-        self.assertEqual("test", server.split_for_signer("S006"))
+        self.assertEqual("validation", server.split_for_signer("S006"))
+        self.assertEqual("test", server.split_for_signer("S007"))
+        self.assertEqual("test", server.split_for_signer("S008"))
         with self.assertRaises(ValueError):
-            server.split_for_signer("S007")
+            server.split_for_signer("S009")
 
     def test_manifest_is_rebuilt_from_recording_files(self) -> None:
         path = server.recording_path("S001", "HELLO", 1, "webm")
@@ -58,11 +60,11 @@ class RecorderServerTest(unittest.TestCase):
 
     def test_progress_detects_completed_repetitions(self) -> None:
         for repetition in (1, 2, 11):
-            path = server.recording_path("S006", "NO_SIGN", repetition, "mp4")
+            path = server.recording_path("S008", "NO_SIGN", repetition, "mp4")
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"video")
 
-        progress = server.progress_for_signer("S006")
+        progress = server.progress_for_signer("S008")
 
         self.assertEqual([1, 2, 11], progress["NO_SIGN"])
 
@@ -75,6 +77,19 @@ class RecorderServerTest(unittest.TestCase):
             with urllib.request.urlopen(f"{base_url}/api/config") as response:
                 config = json.loads(response.read())
             self.assertEqual(11, len(config["classes"]))
+            self.assertEqual(
+                {
+                    "S001": "train",
+                    "S002": "train",
+                    "S003": "train",
+                    "S004": "train",
+                    "S005": "validation",
+                    "S006": "validation",
+                    "S007": "test",
+                    "S008": "test",
+                },
+                config["signerSplits"],
+            )
 
             request = urllib.request.Request(
                 f"{base_url}/api/recording",

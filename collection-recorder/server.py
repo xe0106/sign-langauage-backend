@@ -19,10 +19,10 @@ RECORDINGS_ROOT = ROOT / "recordings"
 VIDEO_ROOT = RECORDINGS_ROOT / "videos"
 MANIFEST_PATH = RECORDINGS_ROOT / "manifest.csv"
 MAX_VIDEO_BYTES = 50 * 1024 * 1024
-SAFE_SIGNER = re.compile(r"^S00[1-6]$")
+SAFE_SIGNER = re.compile(r"^S00[1-8]$")
 SAFE_KEY = re.compile(r"^[A-Z][A-Z0-9_]*$")
 SAMPLE_NAME = re.compile(
-    r"^(?P<signer>s00[1-6])-(?P<key>[a-z0-9_]+)-(?P<repetition>\d{3})\.(?P<extension>webm|mp4)$"
+    r"^(?P<signer>s00[1-8])-(?P<key>[a-z0-9_]+)-(?P<repetition>\d{3})\.(?P<extension>webm|mp4)$"
 )
 MANIFEST_FIELDS = [
     "sample_id",
@@ -54,11 +54,11 @@ manifest_lock = threading.Lock()
 def split_for_signer(signer_id: str) -> str:
     if signer_id in {"S001", "S002", "S003", "S004"}:
         return "train"
-    if signer_id == "S005":
+    if signer_id in {"S005", "S006"}:
         return "validation"
-    if signer_id == "S006":
+    if signer_id in {"S007", "S008"}:
         return "test"
-    raise ValueError("signerId must be one of S001-S006")
+    raise ValueError("signerId must be one of S001-S008")
 
 
 def validate_recording_fields(
@@ -183,7 +183,7 @@ class RecorderHandler(SimpleHTTPRequestHandler):
                     "classes": CLASSES,
                     "signerSplits": {
                         signer: split_for_signer(signer)
-                        for signer in (f"S00{index}" for index in range(1, 7))
+                        for signer in (f"S00{index}" for index in range(1, 9))
                     },
                     "repetitions": 20,
                 },

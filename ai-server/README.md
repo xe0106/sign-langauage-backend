@@ -68,3 +68,22 @@ python -m mindvoice_ai.dataset.sequences \
 The final NPZ stores `features`, integer `labels`, split and signer metadata,
 plus the class ID to stable-key and Korean-label mappings. Class IDs must begin
 at 0 and be contiguous so training and serving cannot silently disagree.
+
+## Baseline training
+
+Train the 1D-CNN baseline after the dataset contains signer-disjoint train,
+validation, and test samples for every class:
+
+```bash
+python -m mindvoice_ai.training.train \
+  --dataset data/training/dataset.npz \
+  --output-dir artifacts/ksl-word-v0.1.0 \
+  --model-version ksl-word-v0.1.0
+```
+
+The version directory contains `model.keras`, `metadata.json`, and
+`evaluation.json`. Metadata fixes the input contract and class mapping and
+includes the model SHA-256 digest. Evaluation reports macro F1, per-class
+metrics, the confusion matrix, and mean CPU inference time per window. These
+generated artifacts are intentionally ignored by Git. Existing version files
+are not overwritten unless `--overwrite` is supplied explicitly.

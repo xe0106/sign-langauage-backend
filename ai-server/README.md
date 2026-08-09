@@ -41,3 +41,30 @@ python -m mindvoice_ai.preprocessing.video \
 ```
 
 Each NPZ contains normalized `features` with shape `(frames, 258)`, landmark presence flags, timestamps, and JSON metadata. Raw videos and generated datasets are ignored by Git.
+
+## Dataset pipeline
+
+Copy `manifests/example.csv` and register every recording with an explicit
+`class_id`, stable key, anonymous signer ID, and split. A signer must belong to
+only one of `train`, `validation`, or `test`; the loader rejects leakage.
+
+Preprocess every registered video and create an index:
+
+```bash
+python -m mindvoice_ai.dataset.batch \
+  --manifest manifests/dataset.csv \
+  --output-root data/processed \
+  --model models/holistic_landmarker.task
+```
+
+Convert variable-length recordings into fixed 30-frame model input arrays:
+
+```bash
+python -m mindvoice_ai.dataset.sequences \
+  --index data/processed/dataset-index.jsonl \
+  --output data/training/dataset.npz
+```
+
+The final NPZ stores `features`, integer `labels`, split and signer metadata,
+plus the class ID to stable-key and Korean-label mappings. Class IDs must begin
+at 0 and be contiguous so training and serving cannot silently disagree.

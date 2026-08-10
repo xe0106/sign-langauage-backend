@@ -52,7 +52,8 @@ public enum ErrorStatus {
     CALLER_NOT_FOUND(HttpStatus.NOT_FOUND, "CALLER404", "발신자가 존재하지 않습니다."),
     RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "RECEIVER404", "수신자가 존재하지 않습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION404", "통화 세션이 존재하지 않습니다."),
-    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "STATUS400", "세션 이름이 유효하지 않습니다.")
+    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "STATUS400", "세션 이름이 유효하지 않습니다."),
+    CANNOT_CALL_SELF(HttpStatus.BAD_REQUEST, "CALL400", "자기 자신에게 통화를 할 수 없습니다.")
     ;
 
     private final HttpStatus httpStatus;

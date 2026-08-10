@@ -34,6 +34,11 @@ public class CallService {
      */
     @Transactional
     public CallSessionResponse createCall(CallCreateRequest request) {
+        // ⭐️ 자기 자신에게 통화 시도 시 예외 발생
+        if (request.getCallerId().equals(request.getReceiverId())) {
+            throw new CallException(ErrorStatus.CANNOT_CALL_SELF); // 커스텀 에러 상태 추가
+        }
+
         User caller = userRepository.findById(request.getCallerId())
                 .orElseThrow(() -> new CallException(ErrorStatus.CALLER_NOT_FOUND));
         User receiver = userRepository.findById(request.getReceiverId())
@@ -76,6 +81,11 @@ public class CallService {
 
         User sender = userRepository.findById(request.getSenderId())
                 .orElseThrow(() -> new CallException(ErrorStatus.RECEIVER_NOT_FOUND));
+
+        // ⭐️ 통화가 연결된 상태가 아니면(종료/거절/대기 중 등) 자막 저장 불가
+        if (session.getStatus() != CallSession.Status.CONNECTED) {
+            throw new CallException(ErrorStatus.INVALID_CALL_STATUS);
+        }
 
         CallSubtitle subtitle = CallSubtitle.create(session, sender, request.getTextContent());
         CallSubtitle savedSubtitle = subtitleRepository.save(subtitle);

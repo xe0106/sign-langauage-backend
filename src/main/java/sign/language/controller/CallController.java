@@ -20,7 +20,7 @@ import java.util.List;
  * - 자막 저장 및 조회
  */
 @RestController
-@RequestMapping("/calls")
+@RequestMapping("/sign/language/call")
 @RequiredArgsConstructor
 public class CallController {
 

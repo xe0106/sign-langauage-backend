@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/ws-stomp/**",
                                 "/calls/**",
+                                "/sign/language/call/**",
                                 "/stomp-test.html"
                         ).permitAll()
                         .anyRequest().authenticated()

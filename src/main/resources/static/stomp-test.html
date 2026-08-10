@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC & 자막 STOMP 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f6f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        input, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 16px; }
+        button:hover { background-color: #45a049; }
+        #logs { background: #1e1e1e; color: #00ff00; padding: 10px; height: 220px; overflow-y: scroll; font-family: monospace; border-radius: 4px; margin-top: 10px; line-height: 1.5; }
+        .status-box { padding: 8px; border-radius: 4px; background: #e9ecef; margin-bottom: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>📱 WebRTC & 자막 STOMP 테스트</h2>
+    
+    <div class="status-box" id="serverStatus">
+        ⚠️ 먼저 터미널에서 <code>./gradlew bootRun</code> 으로 서버를 실행해 주세요!
+    </div>
+
+    <div>
+        <label>통화 방 ID (callId):</label>
+        <input type="text" id="callId" value="call-123">
+    </div>
+
+    <div style="margin-top: 10px;">
+        <button id="connectBtn" onclick="connect()">1. WebSocket 연결 및 방 구독</button>
+    </div>
+
+    <hr style="margin: 20px 0;">
+
+    <div>
+        <label>실시간 수어 자막 메시지 보내기:</label>
+        <input type="text" id="textContent" placeholder="자막 내용 입력 (예: 안녕하세요!)">
+        <button onclick="sendSubtitle()" style="background-color: #2196F3; margin-top: 5px;">2. 자막 전송 (/pub/call/signal)</button>
+    </div>
+
+    <h3>📩 수신 메시지 로그:</h3>
+    <div id="logs"></div>
+</div>
+
+<script>
+    let stompClient = null;
+
+    function log(msg) {
+        const logs = document.getElementById('logs');
+        logs.innerHTML += msg + "<br>";
+        logs.scrollTop = logs.scrollHeight;
+    }
+
+    function connect() {
+        log("🔄 서버 연결 시도 중... (http://localhost:8080/ws-stomp)");
+        document.getElementById('connectBtn').innerText = "⏳ 연결 시도 중...";
+        
+        // 서버 주소 자동 설정 (file:// 접근 및 http:// 접근 모두 대응)
+        let serverUrl = 'http://localhost:8080/ws-stomp';
+        if (window.location.protocol.startsWith('http')) {
+            serverUrl = window.location.origin + '/ws-stomp';
+        }
+
+        const socket = new SockJS(serverUrl);
+        stompClient = Stomp.over(socket);
+        
+        // STOMP 콘솔 로그 디버그 출력
+        stompClient.debug = function(str) {
+            console.log(str);
+        };
+
+        stompClient.connect({}, function (frame) {
+            log("<b style='color:#00ff00'>[성공] WebSocket 연결 성공!</b>");
+            const callId = document.getElementById('callId').value;
+            
+            // /sub/call/{callId} 구독
+            stompClient.subscribe('/sub/call/' + callId, function (response) {
+                log("<b style='color:#00ffff'>[수신 메시지]</b> " + response.body);
+            });
+
+            log("[구독 시작] /sub/call/" + callId + " 방에서 자막 및 신호 대기 중...");
+            document.getElementById('connectBtn').innerText = "✅ 연결 완료 (/sub/call/" + callId + ")";
+            document.getElementById('connectBtn').style.backgroundColor = "#2b8a3e";
+            document.getElementById('serverStatus').innerHTML = "🟢 <b>서버 연결 완료!</b> 자막 전송을 테스트해보세요.";
+            document.getElementById('serverStatus').style.background = "#d3f9d8";
+        }, function (error) {
+            log("<b style='color:#ff6b6b'>[오류] 연결 실패: " + error + "</b>");
+            log("👉 터미널에서 서버(./gradlew bootRun)가 켜져 있는지 확인해 보세요.");
+            document.getElementById('connectBtn').innerText = "❌ 연결 실패 (다시 시도)";
+            document.getElementById('connectBtn').style.backgroundColor = "#e03131";
+        });
+    }
+
+    function sendSubtitle() {
+        if (!stompClient || !stompClient.connected) {
+            alert("먼저 [1. WebSocket 연결] 버튼을 눌러 연결을 완료해 주세요!");
+            return;
+        }
+
+        const callId = document.getElementById('callId').value;
+        const textContent = document.getElementById('textContent').value;
+
+        if (!textContent.trim()) {
+            alert("전송할 자막 내용을 입력해 주세요.");
+            return;
+        }
+
+        const message = {
+            type: "SUBTITLE",
+            callId: callId,
+            senderId: 1,
+            receiverId: 2,
+            textContent: textContent
+        };
+
+        // /pub/call/signal 발행
+        stompClient.send("/pub/call/signal", {}, JSON.stringify(message));
+        log("[전송] /pub/call/signal -> " + JSON.stringify(message));
+        document.getElementById('textContent').value = '';
+    }
+</script>
+
+</body>
+</html>

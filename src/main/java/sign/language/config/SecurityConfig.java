@@ -51,7 +51,10 @@ public class SecurityConfig {
                                 "/sign/language/auth/check-nickname",
                                 "/sign/language/images/upload",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+                                "/ws-stomp/**",
+                                "/calls/**",
+                                "/stomp-test.html"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

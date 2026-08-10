@@ -4,7 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import sign.language.domain.CallSession;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 통화 세션 상태 응답 DTO
@@ -20,4 +24,19 @@ public class CallSessionResponse {
     private String status;      // 통화 상태 (RINGING, CONNECTED, REJECTED, ENDED)
     private LocalDateTime startedAt; // 통화 세션 생성/시작 시각
     private LocalDateTime endedAt;   // 통화 종료/거절 시각
+
+    public static CallSessionResponse from(CallSession session) {
+        return CallSessionResponse.builder()
+                .callId(session.getCallId())
+                .callerId(session.getCaller().getId())
+                .receiverId(session.getReceiver().getId())
+                .status(session.getStatus().name())
+                .startedAt(toLocalDateTime(session.getStartedAt()))
+                .endedAt(toLocalDateTime(session.getEndedAt()))
+                .build();
+    }
+
+    private static LocalDateTime toLocalDateTime(Instant instant) {
+        return instant != null ? LocalDateTime.ofInstant(instant, ZoneId.systemDefault()) : null;
+    }
 }

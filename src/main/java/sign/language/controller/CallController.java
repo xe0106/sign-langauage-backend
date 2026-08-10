@@ -20,7 +20,7 @@ import java.util.List;
  * - 자막 저장 및 조회
  */
 @RestController
-@RequestMapping("/calls")
+@RequestMapping("/sign/language/call")
 @RequiredArgsConstructor
 public class CallController {
 
@@ -49,7 +49,7 @@ public class CallController {
      */
     @PutMapping("/{callId}/status")
     public ApiResponse<CallSessionResponse> updateCallStatus(
-            @PathVariable("callId") String callId,
+            @PathVariable String callId,
             @RequestBody CallSessionRequest request) {
         
         CallSessionResponse response = callService.updateCallStatus(callId, request);
@@ -66,7 +66,7 @@ public class CallController {
      */
     @PostMapping("/{callId}/subtitles")
     public ApiResponse<CallSubtitleResponse> saveSubtitle(
-            @PathVariable("callId") String callId,
+            @PathVariable String callId,
             @RequestBody CallSubtitleRequest request) {
         
         CallSubtitleResponse response = callService.saveSubtitle(callId, request);
@@ -82,7 +82,7 @@ public class CallController {
      */
     @GetMapping("/{callId}/subtitles")
     public ApiResponse<List<CallSubtitleResponse>> getSubtitles(
-            @PathVariable("callId") String callId) {
+            @PathVariable String callId) {
         
         List<CallSubtitleResponse> responses = callService.getSubtitles(callId);
         return ApiResponse.onSuccess(responses);

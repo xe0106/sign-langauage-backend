@@ -7,7 +7,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -17,6 +16,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -28,11 +28,11 @@ public class CallSession {
     private String callId;
 
     public enum Status {
-        DIALING, CONNECTED, ENDED, REJECTED
+        RINGING, CONNECTED, ENDED, REJECTED
     }
 
     @Enumerated(EnumType.STRING)
-    @ColumnDefault("'DIALING'")
+    @ColumnDefault("'RINGING'")
     @Column(name = "status")
     private Status status;
 
@@ -53,8 +53,26 @@ public class CallSession {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "callee_id", nullable = false)
-    private User callee;
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
 
+    // ⭐️ 생성 전용 정적 팩토리 메서드
+    public static CallSession create(User caller, User receiver) {
+        CallSession session = new CallSession();
+        session.callId = UUID.randomUUID().toString();
+        session.caller = caller;
+        session.receiver = receiver;
+        session.status = Status.RINGING;
+        session.startedAt = Instant.now();
+        session.createdAt = Instant.now();
+        return session;
+    }
 
+    // ⭐️ 상태 변경 비즈니스 메서드
+    public void updateStatus(Status newStatus) {
+        this.status = newStatus;
+        if (newStatus == Status.ENDED || newStatus == Status.REJECTED) {
+            this.endedAt = Instant.now();
+        }
+    }
 }

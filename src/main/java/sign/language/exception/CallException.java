@@ -8,10 +8,6 @@ import sign.language.errorcode.ErrorStatus;
  * 통화 세션 없음, 이미 종료된 통화 등의 상황에서 예외를 던질 때 사용합니다.
  */
 public class CallException extends GeneralException {
-    
-    /**
-     * @param errorStatus 비즈니스 에러 상태 코드 (ErrorStatus)
-     */
     public CallException(ErrorStatus errorStatus) {
         super(errorStatus);
     }

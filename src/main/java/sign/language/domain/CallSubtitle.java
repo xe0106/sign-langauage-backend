@@ -43,4 +43,14 @@ public class CallSubtitle {
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
+
+    // ⭐️ 자막 생성 전용 정적 팩토리 메서드
+    public static CallSubtitle create(CallSession call, User sender, String textContent) {
+        CallSubtitle subtitle = new CallSubtitle();
+        subtitle.call = call;
+        subtitle.sender = sender;
+        subtitle.textContent = textContent;
+        subtitle.createdAt = Instant.now();
+        return subtitle;
+    }
 }

@@ -2,115 +2,95 @@ package sign.language.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import sign.language.domain.CallSession;
+import sign.language.domain.CallSubtitle;
+import sign.language.domain.User;
+import sign.language.errorcode.ErrorStatus;
+import sign.language.exception.CallException;
+import sign.language.repository.CallRepository;
+import sign.language.repository.SubtitleRepository;
+import sign.language.repository.UserRepository;
 import sign.language.request.CallCreateRequest;
 import sign.language.request.CallSessionRequest;
 import sign.language.request.CallSubtitleRequest;
 import sign.language.response.CallSessionResponse;
 import sign.language.response.CallSubtitleResponse;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
-/**
- * 화상 통화 비즈니스 로직 서비스
- * 
- * 통화 세션 생성, 통화 상태(수락/거절/종료) 변경,
- * 자막 저장 및 조회 비즈니스 처리
- */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CallService {
 
-    // private final CallRepository callRepository; // 실제 DB 연결 시 의존성 주입
+    private final CallRepository callRepository;
+    private final UserRepository userRepository;
+    private final SubtitleRepository subtitleRepository;
 
     /**
-     * 1. 통화 세션 생성 (전화 걸기)
-     * 
-     * @param request 발신자 및 수신자 정보
-     * @return 고유한 callId가 포함된 초기 통화 세션 응답 객체 (초기 상태: RINGING)
+     * 1. 통화 세션 생성 (전화 걸기) 및 DB 저장
      */
+    @Transactional
     public CallSessionResponse createCall(CallCreateRequest request) {
-        // 랜덤한 통화 고유 UUID 생성
-        String newCallId = UUID.randomUUID().toString();
+        User caller = userRepository.findById(request.getCallerId())
+                .orElseThrow(() -> new CallException(ErrorStatus.CALLER_NOT_FOUND));
+        User receiver = userRepository.findById(request.getReceiverId())
+                .orElseThrow(() -> new CallException(ErrorStatus.RECEIVER_NOT_FOUND));
 
-        return CallSessionResponse.builder()
-                .callId(newCallId)
-                .callerId(request.getCallerId())
-                .receiverId(request.getReceiverId())
-                .status("RINGING") // 전화 발신 중 상태
-                .startedAt(LocalDateTime.now())
-                .endedAt(null)
-                .build();
+        CallSession session = CallSession.create(caller, receiver);
+        CallSession savedSession = callRepository.save(session);
+
+        return CallSessionResponse.from(savedSession);
     }
 
     /**
      * 2. 화상 통화 상태 변경 (수락: CONNECTED, 거절: REJECTED, 종료: ENDED)
-     * 
-     * @param callId 통화 고유 ID
-     * @param request 변경 요청할 상태 정보
-     * @return 업데이트된 통화 세션 응답 객체
      */
+    @Transactional
     public CallSessionResponse updateCallStatus(String callId, CallSessionRequest request) {
-        // TODO: DB 연결 시 callId로 통화 세션 조회 후 존재하지 않을 경우 예외 발생 처리
-        // if (세션이 없다면) {
-        //     throw new CallException(ErrorStatus.CALL_NOT_FOUND);
-        // }
+        CallSession session = callRepository.findById(callId)
+                .orElseThrow(() -> new CallException(ErrorStatus.SESSION_NOT_FOUND));
 
-        LocalDateTime endedAt = null;
-        // 통화 종료(ENDED) 또는 거절(REJECTED) 시 종료 시간 기록
-        if ("ENDED".equalsIgnoreCase(request.getStatus()) || "REJECTED".equalsIgnoreCase(request.getStatus())) {
-            endedAt = LocalDateTime.now();
+        CallSession.Status newStatus;
+        try {
+            // 문자열을 Enum으로 변환 (REJECTED, ENDED, RINGING, CONNECTED 외의 값이면 예외 발생)
+            newStatus = CallSession.Status.valueOf(request.getStatus().toUpperCase());
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // 유효하지 않은 통화 상태값 전달 시 커스텀 예외 던지기
+            throw new CallException(ErrorStatus.INVALID_CALL_STATUS); // 사용하시는 에러상태 객체로 지정
         }
+        session.updateStatus(newStatus);
 
-        return CallSessionResponse.builder()
-                .callId(callId)
-                .callerId(1L)   // 테스트용 임시 기본 값
-                .receiverId(2L) // 테스트용 임시 기본 값
-                .status(request.getStatus())
-                .startedAt(LocalDateTime.now().minusMinutes(5))
-                .endedAt(endedAt)
-                .build();
+        return CallSessionResponse.from(session);
     }
 
     /**
-     * 3. 통화 자막 전송 및 저장
-     * 
-     * @param callId 통화 고유 ID
-     * @param request 자막 송신자 및 번역 텍스트 내용
-     * @return 저장된 자막 정보 응답 객체
+     * 3. 통화 자막 전송 및 DB 영구 저장
      */
+    @Transactional
     public CallSubtitleResponse saveSubtitle(String callId, CallSubtitleRequest request) {
-        // TODO: 이미 종료된 통화인지 여부 검증
-        // if (이미 종료된 통화라면) {
-        //     throw new CallException(ErrorStatus.CALL_ALREADY_ENDED);
-        // }
+        CallSession session = callRepository.findById(callId)
+                .orElseThrow(() -> new CallException(ErrorStatus.SESSION_NOT_FOUND));
 
-        return CallSubtitleResponse.builder()
-                .subtitleId(105L) // 테스트용 임시 ID
-                .callId(callId)
-                .senderId(request.getSenderId())
-                .textContent(request.getTextContent())
-                .createdAt(LocalDateTime.now())
-                .build();
+        User sender = userRepository.findById(request.getSenderId())
+                .orElseThrow(() -> new CallException(ErrorStatus.RECEIVER_NOT_FOUND));
+
+        CallSubtitle subtitle = CallSubtitle.create(session, sender, request.getTextContent());
+        CallSubtitle savedSubtitle = subtitleRepository.save(subtitle);
+
+        return CallSubtitleResponse.from(savedSubtitle);
     }
 
     /**
-     * 4. 특정 통화 세션의 자막 목록 조회
-     * 
-     * @param callId 통화 고유 ID
-     * @return 해당 통화에서 기록된 자막 목록 리스트
+     * 4. 특정 통화 세션의 전체 자막 기록 DB 조회
      */
     public List<CallSubtitleResponse> getSubtitles(String callId) {
-        // TODO: DB에서 callId로 자막 엔티티 리스트를 조회하는 로직 구현
-        CallSubtitleResponse sample = CallSubtitleResponse.builder()
-                .subtitleId(101L)
-                .callId(callId)
-                .senderId(1L)
-                .textContent("안녕하세요 반갑습니다!")
-                .createdAt(LocalDateTime.now().minusMinutes(1))
-                .build();
+        List<CallSubtitle> subtitles = subtitleRepository.findByCall_CallIdOrderByCreatedAtAsc(callId);
 
-        return List.of(sample);
+        return subtitles.stream()
+                .map(CallSubtitleResponse::from)
+                .collect(Collectors.toList());
     }
 }

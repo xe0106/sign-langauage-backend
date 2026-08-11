@@ -99,6 +99,9 @@ public class CallService {
     public List<CallSubtitleResponse> getSubtitles(String callId) {
         List<CallSubtitle> subtitles = subtitleRepository.findByCall_CallIdOrderByCreatedAtAsc(callId);
 
+        CallSession session = callRepository.findById(callId)
+                .orElseThrow(() -> new CallException(ErrorStatus.SESSION_NOT_FOUND));
+
         return subtitles.stream()
                 .map(CallSubtitleResponse::from)
                 .collect(Collectors.toList());

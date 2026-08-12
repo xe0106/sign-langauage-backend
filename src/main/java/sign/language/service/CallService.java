@@ -58,6 +58,10 @@ public class CallService {
         CallSession session = callRepository.findById(callId)
                 .orElseThrow(() -> new CallException(ErrorStatus.SESSION_NOT_FOUND));
 
+        if (session.getStatus() == CallSession.Status.ENDED) {
+            throw new CallException(ErrorStatus.ALREADY_CALL_ENDED);
+        }
+
         CallSession.Status newStatus;
         try {
             // 문자열을 Enum으로 변환 (REJECTED, ENDED, RINGING, CONNECTED 외의 값이면 예외 발생)

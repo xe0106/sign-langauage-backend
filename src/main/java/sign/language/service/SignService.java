@@ -102,7 +102,7 @@ public class SignService {
         user.setLogin();
 
         // 3. DTO 반환 (grantType, accessToken, refreshToken 전달)
-        return new SignResponse.SignInResult(userName, "Bearer", accessToken, refreshToken);
+        return new SignResponse.SignInResult(userName, "Bearer", user.getId(), accessToken, refreshToken);
     }
 
     @Transactional

@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 /**
  * WebRTC 시그널링 및 실시간 자막 전송 메시지 객체 DTO
  */
@@ -29,9 +31,11 @@ public class SignalMessage {
     }
 
     private MessageType type;    // 메시지 종류 (JOIN, OFFER, ANSWER, ICE_CANDIDATE, SUBTITLE, LEAVE)
+    private Long subtitleId;
     private String callId;       // 통화 방 고유 ID
     private Long senderId;       // 메시지를 보낸 사용자 ID
     private Long receiverId;     // 메시지를 받는 대상 사용자 ID
     private Object data;         // SDP 객체 데이터 또는 ICE Candidate 객체 데이터
     private String textContent;  // 실시간 자막 내용 (type가 SUBTITLE일 때 사용)
+    private LocalDateTime createdAt;
 }

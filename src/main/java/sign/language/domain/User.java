@@ -94,7 +94,7 @@ public class User {
 
     @NonNull
     @OneToMany
-    @JoinColumn(name = "callee_id")
+    @JoinColumn(name = "receiver_id")
     private Set<CallSession> callSessions2 = new LinkedHashSet<>();
 
     @NonNull

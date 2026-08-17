@@ -46,7 +46,15 @@ public enum ErrorStatus {
     // 연락처 관련 에러 코드
     CANNOT_ADD_SELF(HttpStatus.BAD_REQUEST, "CONTACT400", "자기 자신을 추가할 수 없습니다."),
     CONTACT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CONTACT409", "이미 등록된 연락처입니다."),
-    CONTACT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTACT404", "연락처가 존재하지 않습니다.")
+    CONTACT_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTACT404", "연락처가 존재하지 않습니다."),
+
+    // 송신 및 수신 에러 코드
+    CALLER_NOT_FOUND(HttpStatus.NOT_FOUND, "CALLER404", "발신자가 존재하지 않습니다."),
+    RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "RECEIVER404", "수신자가 존재하지 않습니다."),
+    SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION404", "통화 세션이 존재하지 않습니다."),
+    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "STATUS400", "세션 이름이 유효하지 않습니다."),
+    CANNOT_CALL_SELF(HttpStatus.BAD_REQUEST, "CALL400_SELF", "자기 자신에게 통화를 할 수 없습니다."),
+    ALREADY_CALL_ENDED(HttpStatus.BAD_REQUEST, "CALL400_ENDED", "이미 종료된 통화입니다.")
     ;
 
     private final HttpStatus httpStatus;

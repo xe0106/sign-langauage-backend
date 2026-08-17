@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC & 자막 STOMP 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f6f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+        input, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 16px; }
+        button:hover { background-color: #45a049; }
+        #logs { background: #1e1e1e; color: #00ff00; padding: 10px; height: 220px; overflow-y: scroll; font-family: monospace; border-radius: 4px; margin-top: 10px; line-height: 1.5; }
+        .status-box { padding: 8px; border-radius: 4px; background: #e9ecef; margin-bottom: 10px; font-weight: bold; }
+        .flex-row { display: flex; gap: 10px; }
+        .flex-row > div { flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>📱 WebRTC & 자막 STOMP 테스트</h2>
+
+    <div class="status-box" id="serverStatus">
+        ⚠️ 먼저 터미널에서 <code>./gradlew bootRun</code> 으로 서버를 실행해 주세요!
+    </div>
+
+    <div>
+        <label>통화 방 ID (callId):</label>
+        <input type="text" id="callId" value="call-123">
+    </div>
+
+    <!-- 발신자 / 수신자 ID 동적 입력 칸 -->
+    <div class="flex-row" style="margin-top: 8px;">
+        <div>
+            <label>발신자 ID (senderId):</label>
+            <input type="number" id="senderId" value="1">
+        </div>
+        <div>
+            <label>수신자 ID (receiverId):</label>
+            <input type="number" id="receiverId" value="2">
+        </div>
+    </div>
+
+    <div style="margin-top: 10px;">
+        <button id="connectBtn" onclick="connect()">1. WebSocket 연결 및 방 구독</button>
+    </div>
+
+    <hr style="margin: 20px 0;">
+
+    <div>
+        <label>실시간 수어 자막 메시지 보내기:</label>
+        <input type="text" id="textContent" placeholder="자막 내용 입력 (예: 안녕하세요!)">
+        <button onclick="sendSubtitle()" style="background-color: #2196F3; margin-top: 5px;">2. 자막 전송 (/pub/call/signal)</button>
+    </div>
+
+    <h3>📩 수신 메시지 로그:</h3>
+    <div id="logs"></div>
+</div>
+
+<script>
+    let stompClient = null;
+
+    function log(msg) {
+        const logs = document.getElementById('logs');
+        logs.innerHTML += msg + "<br>";
+        logs.scrollTop = logs.scrollHeight;
+    }
+
+    function connect() {
+        // 접속한 프로토콜 및 호스트(IP/도메인) 동적 추출
+        let protocol = window.location.protocol.startsWith('https') ? 'https:' : 'http:';
+        let host = window.location.hostname;
+
+        // Nginx를 통해 80 포트로 요청을 받는 경우 포트 번호를 붙이지 않거나 접속 포트를 그대로 사용
+        let port = window.location.port ? ':' + window.location.port : '';
+
+        // 로컬 html 파일(file://)로 직접 열었을 때 예외 처리
+        if (window.location.protocol === 'file:') {
+            host = '50.17.53.222';
+            port = ''; // Nginx 기본 80번 포트로 진입
+        }
+
+        //const serverUrl = 'http://localhost:8080/ws-stomp';
+        const serverUrl = `${protocol}//${host}${port}/ws-stomp`;
+
+        log(`🔄 서버 연결 시도 중... (${serverUrl})`);
+
+        const socket = new SockJS(serverUrl);
+        stompClient = Stomp.over(socket);
+
+        stompClient.debug = function(str) {
+            console.log(str);
+        };
+
+        stompClient.connect({}, function (frame) {
+            log("<b style='color:#00ff00'>[성공] WebSocket 연결 성공!</b>");
+            const callId = document.getElementById('callId').value;
+            const senderId = document.getElementById('senderId').value;
+
+            stompClient.subscribe('/sub/call/' + callId, function (response) {
+                log("<b style='color:#00ffff'>[수신 메시지]</b> " + response.body);
+            });
+
+            stompClient.subscribe('/sub/errors/' + senderId, function (response) {
+                log("<b style='color:#ff6b6b'>[❌ 에러 수신]</b> " + response.body);
+            });
+
+            log("[구독 시작] /sub/call/" + callId + " 방에서 자막 및 신호 대기 중...");
+            document.getElementById('connectBtn').innerText = "✅ 연결 완료 (/sub/call/" + callId + ")";
+            document.getElementById('connectBtn').style.backgroundColor = "#2b8a3e";
+            document.getElementById('serverStatus').innerHTML = "🟢 <b>서버 연결 완료!</b> 자막 전송을 테스트해보세요.";
+            document.getElementById('serverStatus').style.background = "#d3f9d8";
+        }, function (error) {
+            log("<b style='color:#ff6b6b'>[오류] 연결 실패: " + error + "</b>");
+            log("👉 터미널에서 서버(./gradlew bootRun)가 켜져 있는지 확인해 보세요.");
+            document.getElementById('connectBtn').innerText = "❌ 연결 실패 (다시 시도)";
+            document.getElementById('connectBtn').style.backgroundColor = "#e03131";
+        });
+    }
+
+    function sendSubtitle() {
+        if (!stompClient || !stompClient.connected) {
+            alert("먼저 [1. WebSocket 연결] 버튼을 눌러 연결을 완료해 주세요!");
+            return;
+        }
+
+        const callId = document.getElementById('callId').value;
+        const textContent = document.getElementById('textContent').value;
+        const senderId = parseInt(document.getElementById('senderId').value) || 1;
+        const receiverId = parseInt(document.getElementById('receiverId').value) || 2; // 👈 receiverId 동적 수집 추가
+
+        if (!textContent.trim()) {
+            alert("전송할 자막 내용을 입력해 주세요.");
+            return;
+        }
+
+        const message = {
+            type: "SUBTITLE",
+            callId: callId,
+            senderId: senderId,
+            receiverId: receiverId, // 👈 동적 변수 적용
+            textContent: textContent
+        };
+
+        stompClient.send("/pub/call/signal", {}, JSON.stringify(message));
+        log("[전송] /pub/call/signal -> " + JSON.stringify(message));
+        document.getElementById('textContent').value = '';
+    }
+</script>
+
+</body>
+</html>

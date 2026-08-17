@@ -45,11 +45,10 @@ spring:
 
 jasypt:
   encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD}
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:my-secret-key}
     algorithm: PBEWithMD5AndDES
 
 jwt:
-  # 2. 커스텀 비밀키로 수정 (32자 이상)
   secret: signLanguageJwtSecretKeyForAuthentication2026SecureKey!
 
 app:

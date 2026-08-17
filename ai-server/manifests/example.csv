@@ -1,0 +1,4 @@
+sample_id,input_path,class_id,label,stable_key,signer_id,split
+hello-s001-001,../raw/HELLO/S001/001.mp4,0,안녕하세요,HELLO,S001,train
+hello-s002-001,../raw/HELLO/S002/001.mp4,0,안녕하세요,HELLO,S002,validation
+hello-s003-001,../raw/HELLO/S003/001.mp4,0,안녕하세요,HELLO,S003,test

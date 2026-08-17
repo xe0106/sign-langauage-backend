@@ -1,0 +1,1 @@
+"""External dataset catalog adapters."""

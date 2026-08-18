@@ -58,7 +58,8 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
     private WebSocketSession aiSession;
     private final ScheduledExecutorService reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
 
-    // 통화방(callId)별 최근 랜드마크를 보낸 발신자 ID(senderId) 매핑 보존 (senderId 1L 고정 방지)
+    // 세션별(sessionId) 발신자 ID(senderId) 매핑 보존 (동시 통화 시 발신자 뒤바뀜 방지)
+    private final Map<String, Long> sessionSenderMap = new ConcurrentHashMap<>();
     private final Map<String, Long> lastSenderIdMap = new ConcurrentHashMap<>();
 
     @PostConstruct
@@ -123,8 +124,9 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
     public void sendFeatures(AiFeatureMessage message) {
         if (message == null) return;
 
-        // callId별 발신자 ID 보존 (추후 AI 추론 자막 생성 시 진짜 senderId 복원)
-        if (message.getSenderId() != null) {
+        // sessionId별 발신자 ID 보존 (동시 통화 시 자막 발신자 덮어쓰임 방지)
+        if (message.getSessionId() != null && message.getSenderId() != null) {
+            sessionSenderMap.put(message.getSessionId(), message.getSenderId());
             lastSenderIdMap.put(message.getCallId(), message.getSenderId());
         }
 
@@ -169,24 +171,20 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             String label = rootNode.has("label") ? rootNode.get("label").asText() : "";
             String prediction = rootNode.has("prediction") ? rootNode.get("prediction").asText() : "";
             String callId = rootNode.has("callId") ? rootNode.get("callId").asText() : "";
+            String sessionId = rootNode.has("sessionId") ? rootNode.get("sessionId").asText() : "";
 
-            // 1. AI 서버 에러 응답 수신 처리 -> 클라이언트 통화방으로 알림 전달
+            // 1. AI 서버 에러 응답 수신 처리 -> 로그 남김 및 에러 채널 전달
             if ("error".equalsIgnoreCase(type)) {
                 String errorCode = rootNode.has("code") ? rootNode.get("code").asText() : "AI_ERROR";
                 String errorMsg = rootNode.has("message") ? rootNode.get("message").asText() : "AI processing failed";
                 log.error("🔴 [AI WebSocket Error] code: {}, message: {}", errorCode, errorMsg);
 
-                if (callId != null && !callId.isEmpty()) {
-                    SignalMessage errorMessage = SignalMessage.builder()
-                            .type(SignalMessage.MessageType.SUBTITLE)
-                            .callId(callId)
-                            .senderId(lastSenderIdMap.getOrDefault(callId, 1L))
-                            .textContent("[AI ERROR: " + errorCode + "] " + errorMsg)
-                            .subtitleId(System.currentTimeMillis())
-                            .createdAt(ZonedDateTime.now())
-                            .build();
-                    messagingTemplate.convertAndSend("/sub/call/" + callId, errorMessage);
-                }
+                Long errSenderId = sessionSenderMap.getOrDefault(sessionId, lastSenderIdMap.getOrDefault(callId, 1L));
+                messagingTemplate.convertAndSend("/sub/errors/" + errSenderId, Map.of(
+                        "status", "ERROR",
+                        "code", errorCode,
+                        "message", errorMsg
+                ));
                 return;
             }
 
@@ -198,9 +196,9 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
                 return;
             }
 
-            // 3. AI 추론 결과 처리 (DB 영속 저장 후 senderId 동적 복원하여 브로드캐스트)
+            // 3. AI 추론 결과 처리 (sessionId 기반 senderId 1:1 복원 후 DB 영속 저장)
             String subtitleText = (label != null && !label.trim().isEmpty()) ? label : prediction;
-            Long realSenderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : lastSenderIdMap.getOrDefault(callId, 1L);
+            Long realSenderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : sessionSenderMap.getOrDefault(sessionId, lastSenderIdMap.getOrDefault(callId, 1L));
 
             if (("prediction".equalsIgnoreCase(type) || "prediction".equalsIgnoreCase(status))
                     && subtitleText != null && !subtitleText.trim().isEmpty()) {
@@ -208,9 +206,11 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
                 // DB 영속 저장 수행
                 SignalMessage subtitleMessage = saveAndBuildSubtitleMessage(callId, realSenderId, subtitleText);
 
-                // 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
-                messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
-                log.info("📢 [Subtitle Broadcasted] callId: {}, senderId: {}, text: {}", callId, realSenderId, subtitleText);
+                if (subtitleMessage != null) {
+                    // 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
+                    messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
+                    log.info("📢 [Subtitle Broadcasted] callId: {}, senderId: {}, text: {}", callId, realSenderId, subtitleText);
+                }
             }
         } catch (Exception e) {
             log.error("🔴 [AI WebSocket] Failed to handle AI server message: {}", e.getMessage());
@@ -221,9 +221,6 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
      * AI 수어 자막 결과를 DB에 영구 저장하고 브로드캐스트용 SignalMessage 생성
      */
     private SignalMessage saveAndBuildSubtitleMessage(String callId, Long senderId, String textContent) {
-        Long subtitleId = System.currentTimeMillis();
-        ZonedDateTime createdAt = ZonedDateTime.now();
-
         try {
             Optional<CallSession> callSessionOpt = callRepository.findById(callId);
             Optional<User> senderOpt = userRepository.findById(senderId);
@@ -231,25 +228,23 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             if (callSessionOpt.isPresent() && senderOpt.isPresent()) {
                 CallSubtitle subtitle = CallSubtitle.create(callSessionOpt.get(), senderOpt.get(), textContent);
                 CallSubtitle savedSubtitle = subtitleRepository.save(subtitle);
-                subtitleId = savedSubtitle.getId();
-                if (savedSubtitle.getCreatedAt() != null) {
-                    createdAt = savedSubtitle.getCreatedAt().atZone(java.time.ZoneId.systemDefault());
-                }
-                log.info("💾 [AI Subtitle Saved DB] subtitleId: {}, callId: {}", subtitleId, callId);
+                log.info("💾 [AI Subtitle Saved DB] subtitleId: {}, callId: {}", savedSubtitle.getId(), callId);
+
+                return SignalMessage.builder()
+                        .type(SignalMessage.MessageType.SUBTITLE)
+                        .callId(callId)
+                        .senderId(senderId)
+                        .textContent(textContent)
+                        .subtitleId(savedSubtitle.getId())
+                        .createdAt(savedSubtitle.getCreatedAt() != null ? savedSubtitle.getCreatedAt().atZone(java.time.ZoneId.systemDefault()) : ZonedDateTime.now())
+                        .build();
             } else {
-                log.warn("⚠️ [AI Subtitle DB Skip] Session or User not found in DB. Broadcasting with transient ID.");
+                log.warn("⚠️ [AI Subtitle DB Skip] Session or User not found in DB (callId: {}, senderId: {}). Skipping broadcast.", callId, senderId);
+                return null;
             }
         } catch (Exception e) {
             log.error("🔴 [AI Subtitle Save Error] Failed to persist to DB: {}", e.getMessage());
+            return null;
         }
-
-        return SignalMessage.builder()
-                .type(SignalMessage.MessageType.SUBTITLE)
-                .callId(callId)
-                .senderId(senderId)
-                .textContent(textContent)
-                .subtitleId(subtitleId)
-                .createdAt(createdAt)
-                .build();
     }
 }

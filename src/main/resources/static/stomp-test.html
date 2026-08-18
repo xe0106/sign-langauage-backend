@@ -28,7 +28,7 @@
 
     <div>
         <label>통화 방 ID (callId):</label>
-        <input type="text" id="callId" value="call-123">
+        <input type="text" id="callId" value="8f3a5b21-4d1e-4f32-8a90-123456789abc">
     </div>
 
     <!-- 발신자 / 수신자 ID 동적 입력 칸 -->
@@ -74,20 +74,15 @@
     }
 
     function connect() {
-        // 접속한 프로토콜 및 호스트(IP/도메인) 동적 추출
         let protocol = window.location.protocol.startsWith('https') ? 'https:' : 'http:';
         let host = window.location.hostname;
-
-        // Nginx를 통해 80 포트로 요청을 받는 경우 포트 번호를 붙이지 않거나 접속 포트를 그대로 사용
         let port = window.location.port ? ':' + window.location.port : '';
 
-        // 로컬 html 파일(file://)로 직접 열었을 때 예외 처리
         if (window.location.protocol === 'file:') {
             host = '50.17.53.222';
-            port = ''; // Nginx 기본 80번 포트로 진입
+            port = '';
         }
 
-        //const serverUrl = 'http://localhost:8080/ws-stomp';
         const serverUrl = `${protocol}//${host}${port}/ws-stomp`;
 
         log(`🔄 서버 연결 시도 중... (${serverUrl})`);
@@ -134,7 +129,7 @@
         const callId = document.getElementById('callId').value;
         const textContent = document.getElementById('textContent').value;
         const senderId = parseInt(document.getElementById('senderId').value) || 1;
-        const receiverId = parseInt(document.getElementById('receiverId').value) || 2; // 👈 receiverId 동적 수집 추가
+        const receiverId = parseInt(document.getElementById('receiverId').value) || 2;
 
         if (!textContent.trim()) {
             alert("전송할 자막 내용을 입력해 주세요.");
@@ -145,7 +140,7 @@
             type: "SUBTITLE",
             callId: callId,
             senderId: senderId,
-            receiverId: receiverId, // 👈 동적 변수 적용
+            receiverId: receiverId,
             textContent: textContent
         };
 
@@ -155,9 +150,7 @@
     }
 
     let aiSequence = 1;
-
-    // 세션 동안 유지할 표준 UUID 생성 (또는 매 통화마다 1개 생성)
-    const testUuidSessionId = crypto.randomUUID();
+    let currentAiSessionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     function sendAiFeatures() {
         if (!stompClient || !stompClient.connected) {
@@ -168,12 +161,11 @@
         const callId = document.getElementById('callId').value;
         const senderId = parseInt(document.getElementById('senderId').value) || 1;
 
-        // 258개의 가짜(Mock) Float 랜드마크 데이터 배열
         const mockFeatures = new Array(258).fill(0.123);
 
         const aiMessage = {
             type: "landmark_frame",
-            sessionId: testUuidSessionId, // 👈 표준 UUID 형식 (예: "3fa85f64-5717-4562-b3fc-2c963f66afa6")
+            sessionId: currentAiSessionId,
             callId: callId,
             senderId: senderId,
             sequence: aiSequence++,
@@ -182,7 +174,7 @@
         };
 
         stompClient.send("/pub/ai/features", {}, JSON.stringify(aiMessage));
-        log("<b style='color:#e06c75'>[AI 전송]</b> /pub/ai/features (seq: " + aiMessage.sequence + ", features 258개)");
+        log("<b style='color:#e06c75'>[AI 전송]</b> /pub/ai/features (seq: " + aiMessage.sequence + ", sessionId: " + currentAiSessionId.substring(0, 8) + "..., features 258개)");
     }
 </script>
 

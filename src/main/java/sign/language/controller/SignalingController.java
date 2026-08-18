@@ -82,7 +82,41 @@ public class SignalingController {
      */
     @MessageMapping("/ai/features")
     public void handleAiFeatures(AiFeatureMessage message) {
-        // 수신된 258개 랜드마크 특징 데이터를 AI 웹소켓 서버로 릴레이 전송
+        // 1. AI 웹소켓 서버(ws://3.107.177.191:8000/ws/inference)로 릴레이 전송 시도
         aiWebSocketClientService.sendFeatures(message);
+
+        // 2. AI 서버가 연결되지 않은 로컬 테스트 환경인 경우, Mock 자막 DB 저장 후 통화방에 릴레이
+        if (!aiWebSocketClientService.isConnected()) {
+            Long senderId = message.getSenderId() != null ? message.getSenderId() : 1L;
+            String mockText = "no sign";
+
+            try {
+                // Mock 자막 DB 영구 저장
+                CallSubtitleRequest subtitleRequest = new CallSubtitleRequest(senderId, mockText);
+                CallSubtitleResponse savedResponse = callService.saveSubtitle(message.getCallId(), subtitleRequest);
+
+                SignalMessage mockSubtitle = SignalMessage.builder()
+                        .type(SignalMessage.MessageType.SUBTITLE)
+                        .callId(message.getCallId())
+                        .senderId(senderId)
+                        .textContent(mockText)
+                        .subtitleId(savedResponse.getSubtitleId())
+                        .createdAt(savedResponse.getCreatedAt())
+                        .build();
+
+                messagingTemplate.convertAndSend("/sub/call/" + message.getCallId(), mockSubtitle);
+
+            } catch (Exception e) {
+                String errorMsg = e.getMessage() != null ? e.getMessage() : "Mock 자막 저장 중 오류가 발생했습니다.";
+                messagingTemplate.convertAndSend(
+                        "/sub/errors/" + senderId,
+                        Map.of(
+                                "status", "ERROR",
+                                "code", "MOCK_SUBTITLE_SAVE_FAILED",
+                                "message", errorMsg
+                        )
+                );
+            }
+        }
     }
 }

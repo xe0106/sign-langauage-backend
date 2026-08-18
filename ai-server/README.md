@@ -71,8 +71,8 @@ at 0 and be contiguous so training and serving cannot silently disagree.
 
 ## Baseline training
 
-Train the 1D-CNN baseline after the dataset contains signer-disjoint train and
-validation samples for every class. Keep the test signer out of this dataset:
+Train the 1D-CNN baseline after the dataset contains signer-disjoint train,
+validation, and test samples for every class:
 
 ```bash
 python -m mindvoice_ai.training.train \
@@ -82,24 +82,11 @@ python -m mindvoice_ai.training.train \
 ```
 
 The version directory contains `model.keras`, `metadata.json`, and
-`evaluation.json`. The latter records the training history and explicitly marks
-that final test evaluation has not run. Metadata fixes the input contract and
-class mapping and includes the model SHA-256 digest. These generated artifacts
-are intentionally ignored by Git. Existing version files are not overwritten
-unless `--overwrite` is supplied explicitly.
-
-Evaluate the frozen package later against a dataset that includes the held-out
-test signer:
-
-```bash
-python -m mindvoice_ai.training.evaluate \
-  --dataset data/evaluation/dataset-with-test.npz \
-  --model-dir artifacts/ksl-word-v0.1.0 \
-  --output artifacts/ksl-word-v0.1.0/test-evaluation.json
-```
-
-`test-evaluation.json` reports macro F1, accuracy, per-class metrics, the
-confusion matrix, and mean CPU inference time per window for the test split.
+`evaluation.json`. Metadata fixes the input contract and class mapping and
+includes the model SHA-256 digest. Evaluation reports macro F1, per-class
+metrics, the confusion matrix, and mean CPU inference time per window. These
+generated artifacts are intentionally ignored by Git. Existing version files
+are not overwritten unless `--overwrite` is supplied explicitly.
 
 ## Serving a trained model
 

@@ -1,5 +1,6 @@
 package sign.language.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +23,10 @@ public class AiFeatureMessage {
 
     private String sessionId;      // 사용자별 UUID
     private String callId;         // 통화 UUID
-    private Long senderId;         // 자막 송신자 ID (선택)
+
+    @JsonIgnore                    // AI 서버 릴레이 전송 시 JSON에서 제외 (AI 서버 extra="forbid" 호환)
+    private Long senderId;         // 자막 송신자 ID
+
     private Long sequence;         // 프레임 시퀀스 (1부터 증가)
     private Long timestampMs;      // 타임스탬프 (ms)
     private List<Float> features;  // 258개의 Float 랜드마크 배열

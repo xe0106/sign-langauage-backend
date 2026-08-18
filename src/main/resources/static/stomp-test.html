@@ -149,6 +149,7 @@
     }
 
     let aiSequence = 1;
+    let currentAiSessionId = null;
 
     function sendAiFeatures() {
         if (!stompClient || !stompClient.connected) {
@@ -159,13 +160,16 @@
         const callId = document.getElementById('callId').value;
         const senderId = parseInt(document.getElementById('senderId').value) || 1;
 
+        if (!currentAiSessionId) {
+            currentAiSessionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+        }
+
         // 258개의 가짜(Mock) Float 랜드마크 데이터 배열 생성
         const mockFeatures = new Array(258).fill(0.123);
-        const uuidSessionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
         const aiMessage = {
             type: "landmark_frame",
-            sessionId: uuidSessionId,
+            sessionId: currentAiSessionId,
             callId: callId,
             senderId: senderId,
             sequence: aiSequence++,
@@ -174,7 +178,7 @@
         };
 
         stompClient.send("/pub/ai/features", {}, JSON.stringify(aiMessage));
-        log("<b style='color:#e06c75'>[AI 전송]</b> /pub/ai/features (seq: " + aiMessage.sequence + ", features 258개)");
+        log("<b style='color:#e06c75'>[AI 전송]</b> /pub/ai/features (seq: " + aiMessage.sequence + ", sessionId: " + currentAiSessionId.substring(0, 8) + "..., features 258개)");
     }
 </script>
 

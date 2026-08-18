@@ -52,11 +52,11 @@ manifest_lock = threading.Lock()
 
 
 def split_for_signer(signer_id: str) -> str:
-    if signer_id in {"S001", "S002", "S003", "S004"}:
+    if signer_id in {"S001", "S002", "S003", "S004", "S005", "S006"}:
         return "train"
-    if signer_id in {"S005", "S006"}:
+    if signer_id == "S007":
         return "validation"
-    if signer_id in {"S007", "S008"}:
+    if signer_id == "S008":
         return "test"
     raise ValueError("signerId must be one of S001-S008")
 

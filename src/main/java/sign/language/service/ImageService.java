@@ -22,8 +22,12 @@ public class ImageService {
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
 
+    // Cloudflare R2 퍼블릭 도메인 주소 주입 (기본값 설정)
+    @Value("${app.public-s3-url:https://pub-9fe4fb0ab27c4f93b468525639d75c4e.r2.dev}")
+    private String publicS3Url;
+
     /**
-     * 이미지 파일을 S3에 업로드하고 저장된 URL 반환
+     * 이미지 파일을 S3/R2에 업로드하고 외부 접근이 가능한 퍼블릭 URL 반환
      */
     public String uploadImage(MultipartFile file) {
         // 파일이 비어있는지 검증
@@ -39,24 +43,23 @@ public class ImageService {
         String storeFilename = createStoreFilename(originalFilename);
 
         try (InputStream inputStream = file.getInputStream()) {
-            // S3에 파일 업로드
-            var resource = s3Template.upload(bucketName, storeFilename, inputStream);
+            // S3/R2에 파일 업로드
+            s3Template.upload(bucketName, storeFilename, inputStream);
 
-            // 업로드된 파일의 S3 URL 반환
-            return resource.getURL().toString();
+            // S3 내부 resource URL 대신 브라우저에서 바로 열리는 퍼블릭 URL 조합하여 반환
+            return publicS3Url + "/" + storeFilename;
+
         } catch (IOException e) {
             throw new ImageException(ErrorStatus.FILE_UPLOAD_FAILED);
         }
     }
 
-    // 💡 확장자 검증 메서드 예시
     private void validateImageExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             throw new ImageException(ErrorStatus.INVALID_FILE_EXTENSION);
         }
         String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
 
-        // 허용할 이미지 확장자 목록
         List<String> allowedExtensions = List.of("jpg", "jpeg", "png", "gif", "webp");
         if (!allowedExtensions.contains(extension)) {
             throw new ImageException(ErrorStatus.INVALID_FILE_EXTENSION);

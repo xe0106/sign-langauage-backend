@@ -18,7 +18,6 @@ public class LectureResponse {
     private String title;
     private String description;
     private String category;
-    private Integer durationMinutes;
     private String thumbnailUrl;
     private String videoUrl;
     private Instant createdAt;
@@ -30,7 +29,6 @@ public class LectureResponse {
                 .title(lecture.getTitle())
                 .description(lecture.getDescription())
                 .category(lecture.getCategory() != null ? lecture.getCategory().name() : null)
-                .durationMinutes(lecture.getDurationMinutes())
                 .thumbnailUrl(lecture.getThumbnailUrl())
                 .videoUrl(lecture.getVideoUrl())
                 .createdAt(lecture.getCreatedAt())

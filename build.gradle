@@ -20,6 +20,7 @@ repositories {
 dependencies {
 	// 기존의 기본 스타터를 web 스타터로 변경
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	// DB 암호화 모듈

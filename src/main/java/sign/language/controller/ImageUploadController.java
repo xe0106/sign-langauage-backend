@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import sign.language.response.ApiResponse;
 import sign.language.response.ImageResponse;
 import sign.language.service.ImageService;
 
@@ -19,8 +20,8 @@ public class ImageUploadController {
      * POST /images/upload
      */
     @PostMapping("/upload")
-    public ResponseEntity<ImageResponse> uploadImage(@RequestPart("file") MultipartFile file) {
+    public ApiResponse<ImageResponse> uploadImage(@RequestPart("file") MultipartFile file) {
         String imageUrl = imageService.uploadImage(file);
-        return ResponseEntity.ok(new ImageResponse(imageUrl));
+        return ApiResponse.onSuccess(new ImageResponse(imageUrl));
     }
 }

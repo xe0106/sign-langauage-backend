@@ -32,25 +32,26 @@ public class Lecture {
     @Column(name = "title", nullable = false, length = 100)
     private String title;
 
-    @Lob
-    @Column(name = "description")
+    @Column(name = "description", length = 400)
     private String description;
 
     public enum Category {
-        BASIC, DAILY, EMOTION, FAMILY, NUMBER
+        BASIC, NUMBER, FAMILY, EMOTION, GREETING,
+        LOCATION, FOOD, SOCIETY, ECONOMY, EDUCATION,
+        RELIGION, HOUSING, ANIMAL_PLANT, POLITICS, NATURE,
+        CLOTHING, CULTURE, LIFE, CONCEPT, HUMAN, DAILY
     }
 
     @Enumerated(EnumType.STRING)
-    @ColumnDefault("'BASIC'")
+    @ColumnDefault("'DAILY'")
     @Column(name = "category", length = 20)
     private Category category;
 
-    @ColumnDefault("0")
-    @Column(name = "duration_minutes")
-    private Integer durationMinutes;
-
-    @Column(name = "thumbnail_url")
+    @Column(name = "thumbnail_url", length = 400)
     private String thumbnailUrl;
+
+    @Column(name = "quiz_image_url", length = 400)
+    private String quizImageUrl;
 
     @Column(name = "video_url")
     private String videoUrl;

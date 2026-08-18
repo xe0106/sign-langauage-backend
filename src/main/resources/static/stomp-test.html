@@ -156,6 +156,9 @@
 
     let aiSequence = 1;
 
+    // 세션 동안 유지할 표준 UUID 생성 (또는 매 통화마다 1개 생성)
+    const testUuidSessionId = crypto.randomUUID();
+
     function sendAiFeatures() {
         if (!stompClient || !stompClient.connected) {
             alert("먼저 [1. WebSocket 연결] 버튼을 눌러 연결을 완료해 주세요!");
@@ -165,12 +168,12 @@
         const callId = document.getElementById('callId').value;
         const senderId = parseInt(document.getElementById('senderId').value) || 1;
 
-        // 258개의 가짜(Mock) Float 랜드마크 데이터 배열 생성
+        // 258개의 가짜(Mock) Float 랜드마크 데이터 배열
         const mockFeatures = new Array(258).fill(0.123);
 
         const aiMessage = {
             type: "landmark_frame",
-            sessionId: "test-session-" + senderId,
+            sessionId: testUuidSessionId, // 👈 표준 UUID 형식 (예: "3fa85f64-5717-4562-b3fc-2c963f66afa6")
             callId: callId,
             senderId: senderId,
             sequence: aiSequence++,

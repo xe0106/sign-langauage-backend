@@ -25,6 +25,9 @@ public class CallSessionResponse {
     private String type = "INCOMING_CALL"; // 알림 메시지 유형 (INCOMING_CALL 등)
     private String callId;      // 통화 세션 고유 ID (UUID)
     private Long callerId;      // 전화 건 사용자(발신자) ID
+    private String callerName;  // 전화 건 사용자 이름
+    private String callerNickname; // 전화 건 사용자 닉네임
+    private String callerProfileImageUrl; // 전화 건 사용자 프로필 이미지 URL
     private Long receiverId;    // 전화 받는 사용자(수신자) ID
     private String status;      // 통화 상태 (RINGING, CONNECTED, REJECTED, ENDED)
 
@@ -37,9 +40,12 @@ public class CallSessionResponse {
     public static CallSessionResponse from(CallSession session) {
         return CallSessionResponse.builder()
                 .callId(session.getCallId())
-                .callerId(session.getCaller().getId())
-                .receiverId(session.getReceiver().getId())
-                .status(session.getStatus().name())
+                .callerId(session.getCaller() != null ? session.getCaller().getId() : null)
+                .callerName(session.getCaller() != null ? session.getCaller().getName() : null)
+                .callerNickname(session.getCaller() != null ? session.getCaller().getNickname() : null)
+                .callerProfileImageUrl(session.getCaller() != null ? session.getCaller().getProfileImageUrl() : null)
+                .receiverId(session.getReceiver() != null ? session.getReceiver().getId() : null)
+                .status(session.getStatus() != null ? session.getStatus().name() : null)
                 .startedAt(toLocalDateTime(session.getStartedAt()))
                 .endedAt(toLocalDateTime(session.getEndedAt()))
                 .build();

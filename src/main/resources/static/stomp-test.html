@@ -49,10 +49,15 @@
 
     <hr style="margin: 20px 0;">
 
-    <div>
+    <div style="margin-top: 15px;">
         <label>실시간 수어 자막 메시지 보내기:</label>
         <input type="text" id="textContent" placeholder="자막 내용 입력 (예: 안녕하세요!)">
-        <button onclick="sendSubtitle()" style="background-color: #2196F3; margin-top: 5px;">2. 자막 전송 (/pub/call/signal)</button>
+        <button onclick="sendSubtitle()" style="background-color: #2196F3; margin-top: 5px;">2. 자막 직접 전송 (/pub/call/signal)</button>
+    </div>
+
+    <div style="margin-top: 15px;">
+        <label>MediaPipe 258개 랜드마크전송 & AI 서버 릴레이 테스트:</label>
+        <button onclick="sendAiFeatures()" style="background-color: #9C27B0; margin-top: 5px;">3. AI 랜드마크 전송 테스트 (/pub/ai/features)</button>
     </div>
 
     <h3>📩 수신 메시지 로그:</h3>
@@ -147,6 +152,34 @@
         stompClient.send("/pub/call/signal", {}, JSON.stringify(message));
         log("[전송] /pub/call/signal -> " + JSON.stringify(message));
         document.getElementById('textContent').value = '';
+    }
+
+    let aiSequence = 1;
+
+    function sendAiFeatures() {
+        if (!stompClient || !stompClient.connected) {
+            alert("먼저 [1. WebSocket 연결] 버튼을 눌러 연결을 완료해 주세요!");
+            return;
+        }
+
+        const callId = document.getElementById('callId').value;
+        const senderId = parseInt(document.getElementById('senderId').value) || 1;
+
+        // 258개의 가짜(Mock) Float 랜드마크 데이터 배열 생성
+        const mockFeatures = new Array(258).fill(0.123);
+
+        const aiMessage = {
+            type: "landmark_frame",
+            sessionId: "test-session-" + senderId,
+            callId: callId,
+            senderId: senderId,
+            sequence: aiSequence++,
+            timestampMs: Date.now(),
+            features: mockFeatures
+        };
+
+        stompClient.send("/pub/ai/features", {}, JSON.stringify(aiMessage));
+        log("<b style='color:#e06c75'>[AI 전송]</b> /pub/ai/features (seq: " + aiMessage.sequence + ", features 258개)");
     }
 </script>
 

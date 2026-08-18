@@ -12,22 +12,24 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import sign.language.dto.AiFeatureMessage;
 import sign.language.dto.SignalMessage;
+import sign.language.request.CallSubtitleRequest;
+import sign.language.response.CallSubtitleResponse;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.ZonedDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Spring -> AI 서버(ws://3.107.177.191:8000/ws/inference) 웹소켓 연동 클라이언트 서비스
- * 
+ *
  * 1. Android -> Spring으로 수신된 258개 MediaPipe 랜드마크 특징 데이터(features)를 AI 서버로 실시간 릴레이 전송
- * 2. AI 서버가 추론한 수어 자막 결과(prediction)를 수신 받아 통화방(/sub/call/{callId})으로 실시간 브로드캐스트
+ * 2. AI 서버가 추론한 수어 자막 결과(prediction)를 DB에 저장하고 통화방(/sub/call/{callId})으로 실시간 브로드캐스트
  */
 @Slf4j
 @Service
@@ -38,6 +40,7 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
+    private final CallService callService;
 
     private WebSocketSession aiSession;
     private final ScheduledExecutorService reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -67,7 +70,8 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        this.aiSession = session;
+        // 동시 전송 시 세션 충돌 방지를 위한 스레드 안전 래퍼 적용 (전송 제한 5초, 버퍼 512KB)
+        this.aiSession = new ConcurrentWebSocketSessionDecorator(session, 5000, 512 * 1024);
         log.info("🟢 [AI WebSocket] Successfully connected to AI Server: {}", session.getId());
     }
 
@@ -131,27 +135,34 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             String label = rootNode.has("label") ? rootNode.get("label").asText() : "";
             String prediction = rootNode.has("prediction") ? rootNode.get("prediction").asText() : "";
             String callId = rootNode.has("callId") ? rootNode.get("callId").asText() : "";
-            Long senderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : 1L;
+            Long senderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : null;
 
-            // 자막 텍스트 구하기 (label 우선, 없으면 prediction 사용)
+            // 자막 텍스트 추출 (label 우선, 없으면 prediction)
             String subtitleText = (label != null && !label.trim().isEmpty()) ? label : prediction;
 
-            // AI 추론 결과가 "prediction" 타입/상태이고 자막 텍스트가 존재할 때만 브로드캐스트
+            // 추론 결과가 유효하고 텍스트 및 callId/senderId가 존재하는 경우 처리
             if (("prediction".equalsIgnoreCase(type) || "prediction".equalsIgnoreCase(status))
-                    && subtitleText != null && !subtitleText.trim().isEmpty()) {
+                    && subtitleText != null && !subtitleText.trim().isEmpty()
+                    && !callId.isBlank() && senderId != null) {
 
+                // 1. DB에 자막 저장 및 생성된 ID/시각 획득
+                CallSubtitleRequest subtitleRequest = new CallSubtitleRequest(senderId, subtitleText);
+                CallSubtitleResponse savedSubtitle = callService.saveSubtitle(callId, subtitleRequest);
+
+                // 2. 브로드캐스트용 메시지 객체 생성
                 SignalMessage subtitleMessage = SignalMessage.builder()
                         .type(SignalMessage.MessageType.SUBTITLE)
                         .callId(callId)
                         .senderId(senderId)
                         .textContent(subtitleText)
-                        .subtitleId(System.currentTimeMillis())
-                        .createdAt(ZonedDateTime.now())
+                        .subtitleId(savedSubtitle.getSubtitleId())
+                        .createdAt(savedSubtitle.getCreatedAt())
                         .build();
 
-                // 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
+                // 3. 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
                 messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
-                log.info("📢 [Subtitle Broadcasted] callId: {}, text: {}", callId, subtitleText);
+                log.info("📢 [Subtitle Broadcasted] callId: {}, subtitleId: {}, text: {}",
+                        callId, savedSubtitle.getSubtitleId(), subtitleText);
             }
         } catch (Exception e) {
             log.error("🔴 [AI WebSocket] Failed to handle AI server message: {}", e.getMessage());

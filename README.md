@@ -16,7 +16,7 @@ These additional references should also help you:
 
 ### ERD 설계 사진
 
-![스크린샷 2026-08-19 004548.png](../%EC%82%AC%EC%A7%84/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202026-08-19%20004548.png)
+<img width="1522" height="1285" alt="스크린샷 2026-08-19 004548" src="https://github.com/user-attachments/assets/88fdf510-826f-4937-bf42-2cd6e97332fd" />
 
 ### API 명세서 링크
 

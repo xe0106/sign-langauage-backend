@@ -31,7 +31,7 @@ public class CallController {
      * 
      * @param request 발신자 ID(callerId)와 수신자 ID(receiverId) 정보
      * @return 생성된 통화 세션 정보 (callId, RINGING 상태 등)
-     * HTTP Method: POST /calls
+     * HTTP Method: POST /call
      */
     @PostMapping
     public ApiResponse<CallSessionResponse> createCall(@RequestBody CallCreateRequest request) {
@@ -45,7 +45,7 @@ public class CallController {
      * @param callId 통화 세션 고유 ID
      * @param request 변경할 통화 상태 (CONNECTED, REJECTED, ENDED 등)
      * @return 상태가 업데이트된 통화 세션 정보
-     * HTTP Method: PUT /calls/{callId}/status
+     * HTTP Method: PUT /call/{callId}/status
      */
     @PutMapping("/{callId}/status")
     public ApiResponse<CallSessionResponse> updateCallStatus(
@@ -62,7 +62,7 @@ public class CallController {
      * @param callId 통화 세션 고유 ID
      * @param request 자막 발신자 ID 및 수어 번역 텍스트 내용
      * @return 저장 완료된 자막 객체 정보
-     * HTTP Method: POST /calls/{callId}/subtitles
+     * HTTP Method: POST /call/{callId}/subtitles
      */
     @PostMapping("/{callId}/subtitles")
     public ApiResponse<CallSubtitleResponse> saveSubtitle(
@@ -78,9 +78,9 @@ public class CallController {
      * 
      * @param callId 통화 세션 고유 ID
      * @return 해당 통화에서 발생한 자막 리스트
-     * HTTP Method: GET /calls/{callId}/subtitles
+     * HTTP Method: GET /call/{callId}/subtitles/list
      */
-    @GetMapping("/{callId}/subtitles")
+    @GetMapping("/{callId}/subtitles/list")
     public ApiResponse<List<CallSubtitleResponse>> getSubtitles(
             @PathVariable String callId) {
         

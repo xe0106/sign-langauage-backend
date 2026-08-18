@@ -94,7 +94,7 @@ public class User {
 
     @NonNull
     @OneToMany
-    @JoinColumn(name = "callee_id")
+    @JoinColumn(name = "receiver_id")
     private Set<CallSession> callSessions2 = new LinkedHashSet<>();
 
     @NonNull
@@ -185,34 +185,34 @@ public class User {
     }
 
     /**
-     * 퀴즈 정답 제출 시 실행 (개당 20% 상승: 0 -> 20 -> 40 -> 60 -> 80 -> 100)
+     * 퀴즈 정답 제출 시 실행 (문제당 20% 상승: 0 -> 20 -> 40 -> 60 -> 80 -> 100)
+     * @param wasAttendedYesterday 어제 출석(100% 달성) 기록 존재 여부
      */
-    public void recordQuizCorrect() {
+    public void recordQuizCorrect(boolean wasAttendedYesterday) {
         ZoneId zoneId = ZoneId.of("Asia/Seoul");
         LocalDate today = LocalDate.now(zoneId);
 
         if (this.learningDays == null) this.learningDays = 0;
         if (this.learningPercentage == null) this.learningPercentage = 0;
 
-        LocalDate previousActivityDate = (this.updatedAt != null)
+        LocalDate lastUpdateDate = (this.updatedAt != null)
                 ? this.updatedAt.atZone(zoneId).toLocalDate()
                 : null;
 
-        // 날짜가 바뀌었으면(오늘 첫 퀴즈 활동이면) 오늘 달성률 0%로 리셋
-        if (previousActivityDate == null || !previousActivityDate.isEqual(today)) {
+        // 오늘 처음 푼 퀴즈라면 당일 진행률을 0%부터 다시 계산
+        if (lastUpdateDate == null || !lastUpdateDate.isEqual(today)) {
             this.learningPercentage = 0;
         }
 
         int currentPercentage = this.learningPercentage;
-        // 퀴즈 1문제당 +20% (최대 100%)
         int newPercentage = Math.min(100, currentPercentage + 20);
 
-        // 오늘 "처음으로 100% 달성한 순간"에만 Streak 계산 및 반영
+        // 오늘 처음 100%를 달성한 순간에만 연속 출석 일수(Streak) 반영
         if (currentPercentage < 100 && newPercentage == 100) {
-            if (previousActivityDate.isEqual(today.minusDays(1))) {
-                this.learningDays += 1; // 연속 달성
+            if (wasAttendedYesterday) {
+                this.learningDays += 1; // 연속 출석
             } else {
-                this.learningDays = 1;  // 신규/끊긴 후 재달성
+                this.learningDays = 1;  // 신규 또는 연속 끊김 후 재시작
             }
         }
 

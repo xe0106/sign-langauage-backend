@@ -53,6 +53,11 @@ public class SignService {
             throw new SignException(ErrorStatus.DUPLICATE_EMAIL);
         }
 
+        // 전화번호 중복 검사
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new SignException(ErrorStatus.DUPLICATE_PHONE_NUMBER);
+        }
+
         // 이중 검사
         checkNicknameDuplicate(request.getNickname());
 
@@ -97,7 +102,7 @@ public class SignService {
         user.setLogin();
 
         // 3. DTO 반환 (grantType, accessToken, refreshToken 전달)
-        return new SignResponse.SignInResult(userName, "Bearer", accessToken, refreshToken);
+        return new SignResponse.SignInResult(userName, "Bearer", user.getId(), accessToken, refreshToken);
     }
 
     @Transactional

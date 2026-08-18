@@ -87,7 +87,8 @@
             port = ''; // Nginx 기본 80번 포트로 진입
         }
 
-        const serverUrl = `${protocol}//${host}${port}/ws-stomp`;
+        const serverUrl = 'http://localhost:8080/ws-stomp';
+        //const serverUrl = `${protocol}//${host}${port}/ws-stomp`;
 
         log(`🔄 서버 연결 시도 중... (${serverUrl})`);
 
@@ -101,9 +102,14 @@
         stompClient.connect({}, function (frame) {
             log("<b style='color:#00ff00'>[성공] WebSocket 연결 성공!</b>");
             const callId = document.getElementById('callId').value;
+            const senderId = document.getElementById('senderId').value;
 
             stompClient.subscribe('/sub/call/' + callId, function (response) {
                 log("<b style='color:#00ffff'>[수신 메시지]</b> " + response.body);
+            });
+
+            stompClient.subscribe('/sub/errors/' + senderId, function (response) {
+                log("<b style='color:#ff6b6b'>[❌ 에러 수신]</b> " + response.body);
             });
 
             log("[구독 시작] /sub/call/" + callId + " 방에서 자막 및 신호 대기 중...");

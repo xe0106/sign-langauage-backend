@@ -1,0 +1,14 @@
+services:
+  mindvoice-ai:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      MINDVOICE_MODEL_DIR: /models/current
+      MINDVOICE_INFERENCE_TIMEOUT_SECONDS: "1.0"
+      MINDVOICE_MAX_CONCURRENT_INFERENCES: "2"
+      MINDVOICE_SESSION_TTL_SECONDS: "300"
+    volumes:
+      - ${MINDVOICE_MODEL_PACKAGE:-./artifacts/ksl-word-v0.1.0}:/models/current:ro
+    restart: unless-stopped

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -19,6 +20,8 @@ import sign.language.dto.SignalMessage;
 import java.io.IOException;
 import java.net.URI;
 import java.time.ZonedDateTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -34,13 +37,17 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AiWebSocketClientService extends TextWebSocketHandler {
 
-    private static final String AI_WEBSOCKET_URI = "ws://3.107.177.191:8000/ws/inference";
+    @Value("${ai.websocket.url:ws://3.107.177.191:8000/ws/inference}")
+    private String aiWebsocketUri;
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
     private WebSocketSession aiSession;
     private final ScheduledExecutorService reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
+
+    // 통화방(callId)별 최근 랜드마크를 보낸 발신자 ID(senderId) 매핑 보존 (senderId 1L 고정 방지)
+    private final Map<String, Long> lastSenderIdMap = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -57,8 +64,8 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
 
         try {
             StandardWebSocketClient webSocketClient = new StandardWebSocketClient();
-            webSocketClient.doHandshake(this, new WebSocketHttpHeaders(), URI.create(AI_WEBSOCKET_URI));
-            log.info("🟢 [AI WebSocket] Connecting to AI Server: {}", AI_WEBSOCKET_URI);
+            webSocketClient.doHandshake(this, new WebSocketHttpHeaders(), URI.create(aiWebsocketUri));
+            log.info("🟢 [AI WebSocket] Connecting to AI Server: {}", aiWebsocketUri);
         } catch (Exception e) {
             log.error("🔴 [AI WebSocket] Failed to connect to AI Server: {}", e.getMessage());
             scheduleReconnect();
@@ -107,6 +114,11 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
         message.setSessionId(ensureValidUuid(message.getSessionId()));
         message.setCallId(ensureValidUuid(message.getCallId()));
 
+        // callId별 발신자 ID 보존 (추후 AI 추론 자막 생성 시 진짜 senderId 복원)
+        if (message.getSenderId() != null) {
+            lastSenderIdMap.put(message.getCallId(), message.getSenderId());
+        }
+
         if (aiSession != null && aiSession.isOpen()) {
             try {
                 String jsonPayload = objectMapper.writeValueAsString(message);
@@ -116,7 +128,8 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
                 log.error("🔴 [AI WebSocket] Failed to send message to AI Server: {}", e.getMessage());
             }
         } else {
-            log.warn("⚠️ [AI WebSocket] Unable to relay features - AI session is not connected");
+            log.warn("⚠️ [AI WebSocket] AI session is not connected. Attempting reconnection...");
+            connectToAiServer();
         }
     }
 
@@ -133,7 +146,7 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
     }
 
     /**
-     * AI 서버로부터 수어 추론 결과(prediction)가 도착했을 때 처리
+     * AI 서버로부터 수어 추론 결과(prediction) 또는 에러(error)가 도착했을 때 처리
      */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
@@ -148,19 +161,34 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             String label = rootNode.has("label") ? rootNode.get("label").asText() : "";
             String prediction = rootNode.has("prediction") ? rootNode.get("prediction").asText() : "";
             String callId = rootNode.has("callId") ? rootNode.get("callId").asText() : "";
-            Long senderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : 1L;
 
-            // 자막 텍스트 구하기 (label 우선, 없으면 prediction 사용)
+            // 1. AI 서버 에러 응답 수신 처리
+            if ("error".equalsIgnoreCase(type)) {
+                String errorCode = rootNode.has("code") ? rootNode.get("code").asText() : "AI_ERROR";
+                String errorMsg = rootNode.has("message") ? rootNode.get("message").asText() : "AI processing failed";
+                log.error("🔴 [AI WebSocket Error] code: {}, message: {}", errorCode, errorMsg);
+                return;
+            }
+
+            // 2. AI 서버 상태 알림 (warming_up, analyzing 등)
+            if ("status".equalsIgnoreCase(type)) {
+                int buffered = rootNode.has("bufferedFrames") ? rootNode.get("bufferedFrames").asInt() : 0;
+                int required = rootNode.has("requiredFrames") ? rootNode.get("requiredFrames").asInt() : 30;
+                log.info("ℹ️ [AI Frame Status] status: {}, frames: {}/{}", status, buffered, required);
+                return;
+            }
+
+            // 3. AI 추론 결과 처리 (senderId 동적 복원)
             String subtitleText = (label != null && !label.trim().isEmpty()) ? label : prediction;
+            Long realSenderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : lastSenderIdMap.getOrDefault(callId, 1L);
 
-            // AI 추론 결과가 "prediction" 타입/상태이고 자막 텍스트가 존재할 때만 브로드캐스트
             if (("prediction".equalsIgnoreCase(type) || "prediction".equalsIgnoreCase(status))
                     && subtitleText != null && !subtitleText.trim().isEmpty()) {
 
                 SignalMessage subtitleMessage = SignalMessage.builder()
                         .type(SignalMessage.MessageType.SUBTITLE)
                         .callId(callId)
-                        .senderId(senderId)
+                        .senderId(realSenderId)
                         .textContent(subtitleText)
                         .subtitleId(System.currentTimeMillis())
                         .createdAt(ZonedDateTime.now())
@@ -168,7 +196,7 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
 
                 // 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
                 messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
-                log.info("📢 [Subtitle Broadcasted] callId: {}, text: {}", callId, subtitleText);
+                log.info("📢 [Subtitle Broadcasted] callId: {}, senderId: {}, text: {}", callId, realSenderId, subtitleText);
             }
         } catch (Exception e) {
             log.error("🔴 [AI WebSocket] Failed to handle AI server message: {}", e.getMessage());

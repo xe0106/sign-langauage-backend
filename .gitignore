@@ -51,6 +51,9 @@ ai-server/artifacts/*
 !ai-server/artifacts/.gitkeep
 ai-server/models/*
 !ai-server/models/README.md
+collection-recorder/.venv/
+collection-recorder/training-runs/
+collection-recorder/tools/__pycache__/
 *.npy
 *.npz
 *.h5

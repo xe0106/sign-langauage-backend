@@ -91,6 +91,13 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
     }
 
     /**
+     * AI 서버와의 웹소켓 연결 여부 반환
+     */
+    public boolean isConnected() {
+        return aiSession != null && aiSession.isOpen();
+    }
+
+    /**
      * Android -> Spring으로 수신된 특징 데이터를 AI 서버로 릴레이 전송
      */
     public void sendFeatures(AiFeatureMessage message) {

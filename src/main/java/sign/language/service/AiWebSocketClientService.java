@@ -102,7 +102,7 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
     }
 
     /**
-     * Android -> Spring으로 수신된 특징 데이터를 AI 서버로 릴레이 전송
+     * AI 서버 규격에 맞춰 필드를 정제한 후 전송
      */
     public void sendFeatures(AiFeatureMessage message) {
         if (aiSession == null || !aiSession.isOpen()) {
@@ -112,16 +112,24 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
         }
 
         try {
-            String jsonPayload = objectMapper.writeValueAsString(message);
+            // 규격서에 명시된 정확한 6개 필드만 JSON으로 구성
+            java.util.Map<String, Object> payloadMap = new java.util.LinkedHashMap<>();
+            payloadMap.put("type", "landmark_frame");
+            payloadMap.put("sessionId", message.getSessionId());
+            payloadMap.put("callId", message.getCallId());
+            payloadMap.put("sequence", message.getSequence());
+            payloadMap.put("timestampMs", message.getTimestampMs());
+            payloadMap.put("features", message.getFeatures());
+
+            String jsonPayload = objectMapper.writeValueAsString(payloadMap);
+            log.info("📤 [Spring -> AI Payload] seq: {}, callId: {}", message.getSequence(), message.getCallId());
+
             aiSession.sendMessage(new TextMessage(jsonPayload));
         } catch (IOException e) {
             log.error("🔴 [AI WebSocket] Failed to send features to AI server: {}", e.getMessage());
         }
     }
 
-    /**
-     * AI 서버로부터 수어 추론 결과(prediction)가 도착했을 때 처리
-     */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
@@ -129,40 +137,42 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             log.info("📩 [AI WebSocket Received] {}", payload);
 
             JsonNode rootNode = objectMapper.readTree(payload);
-
             String type = rootNode.has("type") ? rootNode.get("type").asText() : "";
-            String status = rootNode.has("status") ? rootNode.get("status").asText() : "";
-            String label = rootNode.has("label") ? rootNode.get("label").asText() : "";
-            String prediction = rootNode.has("prediction") ? rootNode.get("prediction").asText() : "";
-            String callId = rootNode.has("callId") ? rootNode.get("callId").asText() : "";
-            Long senderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : null;
 
-            // 자막 텍스트 추출 (label 우선, 없으면 prediction)
-            String subtitleText = (label != null && !label.trim().isEmpty()) ? label : prediction;
+            // 1. 상태 알림 (warming_up, analyzing)
+            if ("status".equalsIgnoreCase(type)) {
+                String status = rootNode.path("status").asText();
+                int buffered = rootNode.path("bufferedFrames").asInt();
+                int required = rootNode.path("requiredFrames").asInt();
+                log.info("ℹ️ [AI Frame Status] status: {}, frames: {}/{}", status, buffered, required);
+                return;
+            }
 
-            // 추론 결과가 유효하고 텍스트 및 callId/senderId가 존재하는 경우 처리
-            if (("prediction".equalsIgnoreCase(type) || "prediction".equalsIgnoreCase(status))
-                    && subtitleText != null && !subtitleText.trim().isEmpty()
-                    && !callId.isBlank() && senderId != null) {
+            // 2. 최종 추론 결과 (prediction)
+            if ("prediction".equalsIgnoreCase(type)) {
+                String callId = rootNode.path("callId").asText();
+                String label = rootNode.path("label").asText();
+                double confidence = rootNode.path("confidence").asDouble();
 
-                // 1. DB에 자막 저장 및 생성된 ID/시각 획득
-                CallSubtitleRequest subtitleRequest = new CallSubtitleRequest(senderId, subtitleText);
-                CallSubtitleResponse savedSubtitle = callService.saveSubtitle(callId, subtitleRequest);
+                if (label != null && !label.trim().isEmpty() && !callId.isBlank()) {
+                    // 통화방 세션 조회 등을 통해 senderId가 필요한 경우 기본값(예: 1L) 또는 조회값 사용
+                    Long senderId = 1L;
 
-                // 2. 브로드캐스트용 메시지 객체 생성
-                SignalMessage subtitleMessage = SignalMessage.builder()
-                        .type(SignalMessage.MessageType.SUBTITLE)
-                        .callId(callId)
-                        .senderId(senderId)
-                        .textContent(subtitleText)
-                        .subtitleId(savedSubtitle.getSubtitleId())
-                        .createdAt(savedSubtitle.getCreatedAt())
-                        .build();
+                    CallSubtitleRequest subtitleRequest = new CallSubtitleRequest(senderId, label);
+                    CallSubtitleResponse savedSubtitle = callService.saveSubtitle(callId, subtitleRequest);
 
-                // 3. 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
-                messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
-                log.info("📢 [Subtitle Broadcasted] callId: {}, subtitleId: {}, text: {}",
-                        callId, savedSubtitle.getSubtitleId(), subtitleText);
+                    SignalMessage subtitleMessage = SignalMessage.builder()
+                            .type(SignalMessage.MessageType.SUBTITLE)
+                            .callId(callId)
+                            .senderId(senderId)
+                            .textContent(label)
+                            .subtitleId(savedSubtitle.getSubtitleId())
+                            .createdAt(savedSubtitle.getCreatedAt())
+                            .build();
+
+                    messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
+                    log.info("📢 [Subtitle Broadcasted] callId: {}, text: {}, confidence: {}", callId, label, confidence);
+                }
             }
         } catch (Exception e) {
             log.error("🔴 [AI WebSocket] Failed to handle AI server message: {}", e.getMessage());

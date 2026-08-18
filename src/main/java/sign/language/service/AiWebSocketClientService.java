@@ -101,17 +101,34 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
      * Android -> Spring으로 수신된 특징 데이터를 AI 서버로 릴레이 전송
      */
     public void sendFeatures(AiFeatureMessage message) {
-        if (aiSession == null || !aiSession.isOpen()) {
-            log.warn("⚠️ [AI WebSocket] AI Session is not connected. Trying to reconnect...");
-            connectToAiServer();
-            return;
-        }
+        if (message == null) return;
 
+        // AI 서버는 sessionId 및 callId가 엄격한 UUID 표준 포맷이어야 함 (예: 8f3a5b21-4d1e-4f32-8a90-123456789abc)
+        message.setSessionId(ensureValidUuid(message.getSessionId()));
+        message.setCallId(ensureValidUuid(message.getCallId()));
+
+        if (aiSession != null && aiSession.isOpen()) {
+            try {
+                String jsonPayload = objectMapper.writeValueAsString(message);
+                aiSession.sendMessage(new TextMessage(jsonPayload));
+                log.info("📤 [AI WebSocket Relay Sent] callId: {}, seq: {}", message.getCallId(), message.getSequence());
+            } catch (IOException e) {
+                log.error("🔴 [AI WebSocket] Failed to send message to AI Server: {}", e.getMessage());
+            }
+        } else {
+            log.warn("⚠️ [AI WebSocket] Unable to relay features - AI session is not connected");
+        }
+    }
+
+    private String ensureValidUuid(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return java.util.UUID.randomUUID().toString();
+        }
         try {
-            String jsonPayload = objectMapper.writeValueAsString(message);
-            aiSession.sendMessage(new TextMessage(jsonPayload));
-        } catch (IOException e) {
-            log.error("🔴 [AI WebSocket] Failed to send features to AI server: {}", e.getMessage());
+            java.util.UUID.fromString(value);
+            return value;
+        } catch (IllegalArgumentException e) {
+            return java.util.UUID.nameUUIDFromBytes(value.getBytes()).toString();
         }
     }
 

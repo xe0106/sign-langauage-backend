@@ -1,6 +1,7 @@
 package sign.language.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sign.language.domain.CallSession;
@@ -28,6 +29,7 @@ public class CallService {
     private final CallRepository callRepository;
     private final UserRepository userRepository;
     private final SubtitleRepository subtitleRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * 1. 통화 세션 생성 (전화 걸기) 및 DB 저장
@@ -47,7 +49,13 @@ public class CallService {
         CallSession session = CallSession.create(caller, receiver);
         CallSession savedSession = callRepository.save(session);
 
-        return CallSessionResponse.from(savedSession);
+        CallSessionResponse response = CallSessionResponse.from(savedSession);
+        response.setType("INCOMING_CALL");
+
+        // 수신자의 개인 STOMP 채널(/sub/user/{receiverId})로 실시간 통화 수신 알림 전송
+        messagingTemplate.convertAndSend("/sub/user/" + request.getReceiverId(), response);
+
+        return response;
     }
 
     /**
@@ -68,11 +76,17 @@ public class CallService {
             newStatus = CallSession.Status.valueOf(request.getStatus().toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
             // 유효하지 않은 통화 상태값 전달 시 커스텀 예외 던지기
-            throw new CallException(ErrorStatus.INVALID_CALL_STATUS); // 사용하시는 에러상태 객체로 지정
+            throw new CallException(ErrorStatus.INVALID_CALL_STATUS);
         }
         session.updateStatus(newStatus);
 
-        return CallSessionResponse.from(session);
+        CallSessionResponse response = CallSessionResponse.from(session);
+        response.setType("CALL_STATUS_CHANGE");
+
+        // 통화방 구독자들(/sub/call/{callId})에게 통화 상태 변경 알림 전송
+        messagingTemplate.convertAndSend("/sub/call/" + callId, response);
+
+        return response;
     }
 
     /**

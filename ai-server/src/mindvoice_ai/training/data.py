@@ -27,9 +27,7 @@ class TrainingDataset:
         return self.features[mask], self.labels[mask]
 
 
-def load_training_dataset(
-    path: Path, *, require_test_split: bool = True
-) -> TrainingDataset:
+def load_training_dataset(path: Path) -> TrainingDataset:
     if not path.is_file():
         raise FileNotFoundError(f"training dataset not found: {path}")
 
@@ -55,13 +53,11 @@ def load_training_dataset(
             label_keys=tuple(archive["label_keys"].astype(str)),
             label_names=tuple(archive["label_names"].astype(str)),
         )
-    validate_training_dataset(dataset, require_test_split=require_test_split)
+    validate_training_dataset(dataset)
     return dataset
 
 
-def validate_training_dataset(
-    dataset: TrainingDataset, *, require_test_split: bool = True
-) -> None:
+def validate_training_dataset(dataset: TrainingDataset) -> None:
     sample_count = dataset.features.shape[0]
     if dataset.features.ndim != 3 or dataset.features.shape[1:] != (
         SEQUENCE_LENGTH,
@@ -89,12 +85,11 @@ def validate_training_dataset(
     unknown_splits = set(dataset.splits) - set(VALID_SPLITS)
     if unknown_splits:
         raise ValueError(f"unknown dataset splits: {sorted(unknown_splits)}")
-    required_splits = VALID_SPLITS if require_test_split else ("train", "validation")
-    missing_splits = [name for name in required_splits if not np.any(dataset.splits == name)]
+    missing_splits = [name for name in VALID_SPLITS if not np.any(dataset.splits == name)]
     if missing_splits:
         raise ValueError(f"dataset has no samples for splits: {missing_splits}")
     expected_classes = set(range(len(dataset.label_keys)))
-    for split in required_splits:
+    for split in VALID_SPLITS:
         present_classes = set(dataset.labels[dataset.splits == split].tolist())
         missing_classes = sorted(expected_classes - present_classes)
         if missing_classes:

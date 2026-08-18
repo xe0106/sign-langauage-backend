@@ -1,6 +1,8 @@
 package sign.language.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,9 +19,12 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AiFeatureMessage {
+
     @Builder.Default
-    private String type = "landmark_frame"; // AI 서버 전송 표준 필드
+    private String type = "landmark_frame"; // AI 서버 필수 필드
 
     private String sessionId;      // 사용자별 UUID
     private String callId;         // 통화 UUID

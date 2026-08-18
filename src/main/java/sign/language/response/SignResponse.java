@@ -12,6 +12,7 @@ public class SignResponse {
     public static class SignInResult {
         private String userName;
         private String grantType;     // "Bearer"
+        private Long userId;
         private String accessToken;
         private String refreshToken;
     }

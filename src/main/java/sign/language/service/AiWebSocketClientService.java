@@ -13,6 +13,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import sign.language.domain.CallSession;
 import sign.language.domain.CallSubtitle;
@@ -26,6 +27,7 @@ import sign.language.repository.UserRepository;
 import java.io.IOException;
 import java.net.URI;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,9 +37,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Spring -> AI 서버(ws://3.107.177.191:8000/ws/inference) 웹소켓 연동 클라이언트 서비스
- * 
+ *
  * 1. Android -> Spring으로 수신된 258개 MediaPipe 랜드마크 특징 데이터(features)를 AI 서버로 실시간 릴레이 전송
- * 2. AI 서버가 추론한 수어 자막 결과(prediction)를 수신 받아 DB에 저장하고 통화방(/sub/call/{callId})으로 실시간 브로드캐스트
+ * 2. AI 서버가 추론한 수어 자막 결과(prediction)를 DB에 저장하고 통화방(/sub/call/{callId})으로 실시간 브로드캐스트
  */
 @Slf4j
 @Service
@@ -84,7 +86,8 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        this.aiSession = session;
+        // 동시 전송 시 세션 충돌 방지를 위한 스레드 안전 래퍼 적용 (전송 제한 5초, 버퍼 512KB)
+        this.aiSession = new ConcurrentWebSocketSessionDecorator(session, 5000, 512 * 1024);
         log.info("🟢 [AI WebSocket] Successfully connected to AI Server: {}", session.getId());
     }
 
@@ -115,7 +118,7 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
     }
 
     /**
-     * Android -> Spring으로 수신된 특징 데이터를 AI 서버로 릴레이 전송
+     * AI 서버 규격에 맞춰 정확히 6개 필드만 전송 (extra="forbid" 대응)
      */
     public void sendFeatures(AiFeatureMessage message) {
         if (message == null) return;
@@ -125,17 +128,28 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             lastSenderIdMap.put(message.getCallId(), message.getSenderId());
         }
 
-        if (aiSession != null && aiSession.isOpen()) {
-            try {
-                String jsonPayload = objectMapper.writeValueAsString(message);
-                aiSession.sendMessage(new TextMessage(jsonPayload));
-                log.info("📤 [AI WebSocket Relay Sent] callId: {}, seq: {}", message.getCallId(), message.getSequence());
-            } catch (IOException e) {
-                log.error("🔴 [AI WebSocket] Failed to send message to AI Server: {}", e.getMessage());
-            }
-        } else {
-            log.warn("⚠️ [AI WebSocket] AI session is not connected. Attempting reconnection...");
+        if (aiSession == null || !aiSession.isOpen()) {
+            log.warn("⚠️ [AI WebSocket] AI Session is not connected. Attempting reconnection...");
             connectToAiServer();
+            return;
+        }
+
+        try {
+            // 규격서에 명시된 정확한 6개 필드만 JSON으로 구성
+            Map<String, Object> payloadMap = new LinkedHashMap<>();
+            payloadMap.put("type", "landmark_frame");
+            payloadMap.put("sessionId", message.getSessionId());
+            payloadMap.put("callId", message.getCallId());
+            payloadMap.put("sequence", message.getSequence());
+            payloadMap.put("timestampMs", message.getTimestampMs());
+            payloadMap.put("features", message.getFeatures());
+
+            String jsonPayload = objectMapper.writeValueAsString(payloadMap);
+            log.info("📤 [Spring -> AI Payload] seq: {}, callId: {}", message.getSequence(), message.getCallId());
+
+            aiSession.sendMessage(new TextMessage(jsonPayload));
+        } catch (IOException e) {
+            log.error("🔴 [AI WebSocket] Failed to send features to AI server: {}", e.getMessage());
         }
     }
 
@@ -184,7 +198,7 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
                 return;
             }
 
-            // 3. AI 추론 결과 처리 (DB 저장 후 senderId 동적 복원하여 브로드캐스트)
+            // 3. AI 추론 결과 처리 (DB 영속 저장 후 senderId 동적 복원하여 브로드캐스트)
             String subtitleText = (label != null && !label.trim().isEmpty()) ? label : prediction;
             Long realSenderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : lastSenderIdMap.getOrDefault(callId, 1L);
 

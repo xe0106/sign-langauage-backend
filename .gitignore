@@ -38,3 +38,25 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### AI service ###
+.env
+*.env
+ai-server/.venv/
+ai-server/.pytest_cache/
+ai-server/**/__pycache__/
+ai-server/**/*.egg-info/
+ai-server/data/
+ai-server/artifacts/*
+!ai-server/artifacts/.gitkeep
+ai-server/models/*
+!ai-server/models/README.md
+collection-recorder/.venv/
+collection-recorder/training-runs/
+collection-recorder/tools/__pycache__/
+*.npy
+*.npz
+*.h5
+*.keras
+*.onnx
+*.tflite

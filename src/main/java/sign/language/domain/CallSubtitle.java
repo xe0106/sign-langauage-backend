@@ -51,6 +51,7 @@ public class CallSubtitle {
         subtitle.sender = sender;
         subtitle.textContent = textContent;
         subtitle.createdAt = Instant.now();
+        System.out.println("생성됨");
         return subtitle;
     }
 }

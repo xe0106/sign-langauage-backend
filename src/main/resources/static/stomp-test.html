@@ -74,17 +74,13 @@
     }
 
     function connect() {
-        // 접속한 프로토콜 및 호스트(IP/도메인) 동적 추출
         let protocol = window.location.protocol.startsWith('https') ? 'https:' : 'http:';
         let host = window.location.hostname;
-
-        // Nginx를 통해 80 포트로 요청을 받는 경우 포트 번호를 붙이지 않거나 접속 포트를 그대로 사용
         let port = window.location.port ? ':' + window.location.port : '';
 
-        // 로컬 html 파일(file://)로 직접 열었을 때 예외 처리
         if (window.location.protocol === 'file:') {
             host = '50.17.53.222';
-            port = ''; // Nginx 기본 80번 포트로 진입
+            port = '';
         }
 
         const serverUrl = `${protocol}//${host}${port}/ws-stomp`;
@@ -101,9 +97,14 @@
         stompClient.connect({}, function (frame) {
             log("<b style='color:#00ff00'>[성공] WebSocket 연결 성공!</b>");
             const callId = document.getElementById('callId').value;
+            const senderId = document.getElementById('senderId').value;
 
             stompClient.subscribe('/sub/call/' + callId, function (response) {
                 log("<b style='color:#00ffff'>[수신 메시지]</b> " + response.body);
+            });
+
+            stompClient.subscribe('/sub/errors/' + senderId, function (response) {
+                log("<b style='color:#ff6b6b'>[❌ 에러 수신]</b> " + response.body);
             });
 
             log("[구독 시작] /sub/call/" + callId + " 방에서 자막 및 신호 대기 중...");
@@ -128,7 +129,7 @@
         const callId = document.getElementById('callId').value;
         const textContent = document.getElementById('textContent').value;
         const senderId = parseInt(document.getElementById('senderId').value) || 1;
-        const receiverId = parseInt(document.getElementById('receiverId').value) || 2; // 👈 receiverId 동적 수집 추가
+        const receiverId = parseInt(document.getElementById('receiverId').value) || 2;
 
         if (!textContent.trim()) {
             alert("전송할 자막 내용을 입력해 주세요.");
@@ -139,7 +140,7 @@
             type: "SUBTITLE",
             callId: callId,
             senderId: senderId,
-            receiverId: receiverId, // 👈 동적 변수 적용
+            receiverId: receiverId,
             textContent: textContent
         };
 
@@ -149,7 +150,7 @@
     }
 
     let aiSequence = 1;
-    let currentAiSessionId = null;
+    let currentAiSessionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
     function sendAiFeatures() {
         if (!stompClient || !stompClient.connected) {
@@ -160,11 +161,6 @@
         const callId = document.getElementById('callId').value;
         const senderId = parseInt(document.getElementById('senderId').value) || 1;
 
-        if (!currentAiSessionId) {
-            currentAiSessionId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-        }
-
-        // 258개의 가짜(Mock) Float 랜드마크 데이터 배열 생성
         const mockFeatures = new Array(258).fill(0.123);
 
         const aiMessage = {

@@ -23,6 +23,7 @@ public enum ErrorStatus {
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER404", "존재하지 않는 회원입니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "MEMBER409_EMAIL", "이미 가입된 이메일입니다."),
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "MEMBER409_NICKNAME", "이미 사용 중인 닉네임입니다."),
+    DUPLICATE_PHONE_NUMBER(HttpStatus.CONFLICT, "MEMBER409_PHONE_NUMBER", "이미 사용 중인 전화번호입니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "MEMBER401", "비밀번호가 일치하지 않습니다."),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "MEMBER400_FORMAT", "입력값 형식이 올바르지 않습니다."),
     LOGOUT_FAILED(HttpStatus.BAD_REQUEST, "MEMBER400_LOGOUT", "로그아웃 처리에 실패했습니다."),
@@ -51,7 +52,9 @@ public enum ErrorStatus {
     CALLER_NOT_FOUND(HttpStatus.NOT_FOUND, "CALLER404", "발신자가 존재하지 않습니다."),
     RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "RECEIVER404", "수신자가 존재하지 않습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION404", "통화 세션이 존재하지 않습니다."),
-    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "STATUS400", "세션 이름이 유효하지 않습니다.")
+    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "STATUS400", "세션 이름이 유효하지 않습니다."),
+    CANNOT_CALL_SELF(HttpStatus.BAD_REQUEST, "CALL400_SELF", "자기 자신에게 통화를 할 수 없습니다."),
+    ALREADY_CALL_ENDED(HttpStatus.BAD_REQUEST, "CALL400_ENDED", "이미 종료된 통화입니다.")
     ;
 
     private final HttpStatus httpStatus;

@@ -17,6 +17,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AiFeatureMessage {
+    @Builder.Default
+    private String type = "landmark_frame"; // AI 서버 전송 표준 필드
+
     private String sessionId;      // 사용자별 UUID
     private String callId;         // 통화 UUID
     private Long senderId;         // 자막 송신자 ID (선택)

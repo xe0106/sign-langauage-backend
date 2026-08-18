@@ -119,25 +119,32 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
 
             JsonNode rootNode = objectMapper.readTree(payload);
 
+            String type = rootNode.has("type") ? rootNode.get("type").asText() : "";
             String status = rootNode.has("status") ? rootNode.get("status").asText() : "";
+            String label = rootNode.has("label") ? rootNode.get("label").asText() : "";
             String prediction = rootNode.has("prediction") ? rootNode.get("prediction").asText() : "";
             String callId = rootNode.has("callId") ? rootNode.get("callId").asText() : "";
             Long senderId = rootNode.has("senderId") ? rootNode.get("senderId").asLong() : 1L;
 
-            // AI 추론 결과가 "prediction" 상태이고 자막 내용이 존재할 때만 브로드캐스트
-            if ("prediction".equalsIgnoreCase(status) && prediction != null && !prediction.trim().isEmpty()) {
+            // 자막 텍스트 구하기 (label 우선, 없으면 prediction 사용)
+            String subtitleText = (label != null && !label.trim().isEmpty()) ? label : prediction;
+
+            // AI 추론 결과가 "prediction" 타입/상태이고 자막 텍스트가 존재할 때만 브로드캐스트
+            if (("prediction".equalsIgnoreCase(type) || "prediction".equalsIgnoreCase(status))
+                    && subtitleText != null && !subtitleText.trim().isEmpty()) {
+
                 SignalMessage subtitleMessage = SignalMessage.builder()
                         .type(SignalMessage.MessageType.SUBTITLE)
                         .callId(callId)
                         .senderId(senderId)
-                        .textContent(prediction)
-                        .subtitleId(System.currentTimeMillis()) // 임시자막 ID
+                        .textContent(subtitleText)
+                        .subtitleId(System.currentTimeMillis())
                         .createdAt(ZonedDateTime.now())
                         .build();
 
-                // 통화방 구독자들(/sub/call/{callId})에게 자막 브로드캐스트
+                // 통화방 구독자들(/sub/call/{callId})에게 실시간 자막 브로드캐스트
                 messagingTemplate.convertAndSend("/sub/call/" + callId, subtitleMessage);
-                log.info("📢 [Subtitle Broadcasted] callId: {}, text: {}", callId, prediction);
+                log.info("📢 [Subtitle Broadcasted] callId: {}, text: {}", callId, subtitleText);
             }
         } catch (Exception e) {
             log.error("🔴 [AI WebSocket] Failed to handle AI server message: {}", e.getMessage());

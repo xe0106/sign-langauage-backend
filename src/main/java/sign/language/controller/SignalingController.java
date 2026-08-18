@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import sign.language.dto.AiFeatureMessage;
 import sign.language.dto.SignalMessage;
+import sign.language.service.AiWebSocketClientService;
 
 /**
  * WebRTC 시그널링 및 실시간 자막 전송 컨트롤러
@@ -17,6 +19,7 @@ import sign.language.dto.SignalMessage;
 public class SignalingController {
 
     private final SimpMessagingTemplate messagingTemplate;
+    private final AiWebSocketClientService aiWebSocketClientService;
 
     /**
      * WebRTC 시그널링 신호 및 실시간 자막 릴레이 메소드
@@ -31,5 +34,17 @@ public class SignalingController {
     public void handleSignal(SignalMessage message) {
         // 해당 callId 통화 방을 구독 중인 수신자(들)에게 메시지를 실시간으로 브로드캐스트 전송
         messagingTemplate.convertAndSend("/sub/call/" + message.getCallId(), message);
+    }
+
+    /**
+     * Android -> Spring: 258개 MediaPipe 랜드마크 특징 데이터(features) 수신 메소드
+     * 
+     * [클라이언트 통신 규칙]
+     * - 메시지 송신(Publish) 경로: /pub/ai/features
+     */
+    @MessageMapping("/ai/features")
+    public void handleAiFeatures(AiFeatureMessage message) {
+        // 수신된 258개 특징 데이터를 AI 웹소켓 서버(ws://3.107.177.191:8000/ws/inference)로 릴레이 전송
+        aiWebSocketClientService.sendFeatures(message);
     }
 }

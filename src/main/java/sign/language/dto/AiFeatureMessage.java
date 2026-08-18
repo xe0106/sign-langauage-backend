@@ -1,5 +1,6 @@
 package sign.language.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,23 +24,31 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AiFeatureMessage {
 
-    // 1. type 필드는 Android/웹에서 들어올 땐 받고, AI 서버로 나갈 땐 null이면 JSON에서 제외됨
+    // 1. type 필드는 수신용 (AI 서버 전송 시 null 처리하여 제외)
     private String type;
 
-    // 2. AI 서버(FastAPI)가 요구하는 snake_case 매핑
+    // 2. 클라이언트 수신: sessionId 또는 session_id 둘 다 수용 / AI 서버 전송: session_id로 직렬화
     @JsonProperty("session_id")
-    private String sessionId;      // 사용자별 UUID
+    @JsonAlias({"sessionId", "session_id"})
+    private String sessionId;
 
     @JsonProperty("call_id")
-    private String callId;         // 통화 UUID
+    @JsonAlias({"callId", "call_id"})
+    private String callId;
 
     @JsonProperty("sender_id")
-    private Long senderId;         // 자막 송신자 ID
+    @JsonAlias({"senderId", "sender_id"})
+    private Long senderId;
 
-    private Long sequence;         // 프레임 시퀀스 (1부터 증가)
+    @JsonProperty("sequence")
+    @JsonAlias({"sequence"})
+    private Long sequence;
 
     @JsonProperty("timestamp_ms")
-    private Long timestampMs;      // 타임스탬프 (ms)
+    @JsonAlias({"timestampMs", "timestamp_ms"})
+    private Long timestampMs;
 
-    private List<Float> features;  // 258개의 Float 랜드마크 배열
+    @JsonProperty("features")
+    @JsonAlias({"features"})
+    private List<Float> features;
 }

@@ -173,18 +173,27 @@ public class AiWebSocketClientService extends TextWebSocketHandler {
             String callId = rootNode.has("callId") ? rootNode.get("callId").asText() : "";
             String sessionId = rootNode.has("sessionId") ? rootNode.get("sessionId").asText() : "";
 
-            // 1. AI 서버 에러 응답 수신 처리 -> 로그 남김 및 에러 채널 전달
+            // 1. AI 서버 에러 응답 수신 처리 -> 로그 남김 및 상관관계 존재 시에만 에러 채널 전달 (1L fallback 제거)
             if ("error".equalsIgnoreCase(type)) {
                 String errorCode = rootNode.has("code") ? rootNode.get("code").asText() : "AI_ERROR";
                 String errorMsg = rootNode.has("message") ? rootNode.get("message").asText() : "AI processing failed";
                 log.error("🔴 [AI WebSocket Error] code: {}, message: {}", errorCode, errorMsg);
 
-                Long errSenderId = sessionSenderMap.getOrDefault(sessionId, lastSenderIdMap.getOrDefault(callId, 1L));
-                messagingTemplate.convertAndSend("/sub/errors/" + errSenderId, Map.of(
-                        "status", "ERROR",
-                        "code", errorCode,
-                        "message", errorMsg
-                ));
+                Long errSenderId = null;
+                if (!sessionId.isEmpty() && sessionSenderMap.containsKey(sessionId)) {
+                    errSenderId = sessionSenderMap.get(sessionId);
+                } else if (!callId.isEmpty() && lastSenderIdMap.containsKey(callId)) {
+                    errSenderId = lastSenderIdMap.get(callId);
+                }
+
+                if (errSenderId != null) {
+                    messagingTemplate.convertAndSend("/sub/errors/" + errSenderId, Map.of(
+                            "status", "ERROR",
+                            "code", errorCode,
+                            "message", errorMsg
+                    ));
+                    log.info("📢 [AI Error Notification Sent] senderId: {}, code: {}", errSenderId, errorCode);
+                }
                 return;
             }
 

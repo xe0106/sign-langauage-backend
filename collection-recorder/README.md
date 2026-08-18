@@ -52,9 +52,9 @@ http://127.0.0.1:8765
 분할은 도구가 다음처럼 강제합니다.
 
 ```text
-S001~S004: train
-S005~S006: validation
-S007~S008: test
+S001~S006: train
+S007: validation
+S008: test
 ```
 
 ## 저장 결과

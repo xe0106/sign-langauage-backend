@@ -26,7 +26,13 @@ MODEL_DIR_ENV = "MINDVOICE_MODEL_DIR"
 INFERENCE_TIMEOUT_ENV = "MINDVOICE_INFERENCE_TIMEOUT_SECONDS"
 MAX_CONCURRENCY_ENV = "MINDVOICE_MAX_CONCURRENT_INFERENCES"
 SESSION_TTL_ENV = "MINDVOICE_SESSION_TTL_SECONDS"
+MIRROR_INPUT_X_ENV = "MINDVOICE_MIRROR_INPUT_X"
 MIN_SESSION_FRAMES = 3
+POSE_COMPONENTS = 4
+HAND_COMPONENTS = 3
+POSE_LANDMARK_FEATURES = 33 * POSE_COMPONENTS
+LEFT_HAND_OFFSET = POSE_LANDMARK_FEATURES
+RIGHT_HAND_OFFSET = LEFT_HAND_OFFSET + 21 * HAND_COMPONENTS
 
 
 async def _predict_with_limits(
@@ -50,6 +56,15 @@ async def _predict_with_limits(
         return result
 
 
+def mirror_input_x_coordinates(features: np.ndarray) -> np.ndarray:
+    """Mirror normalized image-space X coordinates without changing handedness."""
+    mirrored = features.astype(np.float32, copy=True)
+    mirrored[:, 0:POSE_LANDMARK_FEATURES:POSE_COMPONENTS] *= -1.0
+    mirrored[:, LEFT_HAND_OFFSET:RIGHT_HAND_OFFSET:HAND_COMPONENTS] *= -1.0
+    mirrored[:, RIGHT_HAND_OFFSET::HAND_COMPONENTS] *= -1.0
+    return mirrored
+
+
 def create_app(
     predictor: Predictor | None = None,
     *,
@@ -57,6 +72,7 @@ def create_app(
     inference_timeout_seconds: float | None = None,
     max_concurrent_inferences: int | None = None,
     session_ttl_seconds: float | None = None,
+    mirror_input_x: bool | None = None,
 ) -> FastAPI:
     if inference_timeout_seconds is None:
         inference_timeout_seconds = float(os.getenv(INFERENCE_TIMEOUT_ENV, "1.0"))
@@ -64,6 +80,10 @@ def create_app(
         max_concurrent_inferences = int(os.getenv(MAX_CONCURRENCY_ENV, "2"))
     if session_ttl_seconds is None:
         session_ttl_seconds = float(os.getenv(SESSION_TTL_ENV, "300"))
+    if mirror_input_x is None:
+        mirror_input_x = os.getenv(MIRROR_INPUT_X_ENV, "false").lower() in {
+            "1", "true", "yes", "on"
+        }
     if inference_timeout_seconds <= 0:
         raise ValueError("inference_timeout_seconds must be positive")
     if max_concurrent_inferences <= 0:
@@ -83,6 +103,7 @@ def create_app(
     application.state.predictor = predictor
     application.state.model_error = model_error
     application.state.sessions = sessions
+    application.state.mirror_input_x = mirror_input_x
 
     @application.get("/health")
     async def health() -> dict[str, object]:
@@ -93,6 +114,7 @@ def create_app(
             "version": __version__,
             "modelStatus": "available" if active_predictor else "unavailable",
             "activeSessions": len(sessions),
+            "mirrorInputX": application.state.mirror_input_x,
         }
         if active_predictor:
             response["modelVersion"] = active_predictor.metadata.modelVersion
@@ -205,6 +227,8 @@ def create_app(
                     features = np.asarray(
                         [item.features for item in buffer.frames], dtype=np.float32
                     )
+                    if application.state.mirror_input_x:
+                        features = mirror_input_x_coordinates(features)
                     window = resample_features(features)
                     prediction = await _predict_with_limits(
                         active_predictor,

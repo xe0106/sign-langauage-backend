@@ -14,5 +14,7 @@ https://baejeonghwan777-9831769.postman.co/workspace/bae's-Workspace~d09fbbed-29
 
 ### 설계 다이어그램
 
+화살표는 상속을 의미합니다.
+
 <img width="1400" height="1160" alt="스크린샷 2026-08-19 105140" src="https://github.com/user-attachments/assets/3dabb2c4-1f5a-4b39-8bac-a7479d30fb3d" />
 

@@ -10,6 +10,8 @@ import sign.language.exception.SignException;
 import sign.language.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
@@ -24,7 +26,7 @@ public class HomeService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new SignException(ErrorStatus.DELETED_MEMBER));
 
-        LocalDateTime now = LocalDateTime.now();
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
 
         // 날짜 포맷팅
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd (E)", Locale.KOREAN);

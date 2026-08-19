@@ -112,10 +112,23 @@ uvicorn mindvoice_ai.app:app --app-dir src
 
 On Windows PowerShell, use `$env:MINDVOICE_MODEL_DIR` instead of `export`.
 `GET /health` reports the loaded model version or the package validation error.
-After the 30-frame warm-up, the WebSocket reports `analyzing` until the same
-confident public class is observed for the configured number of windows. A
-stable prediction is emitted once, and remains suppressed until `NO_SIGN` or a
-different stable class releases it.
+The WebSocket buffers every `landmark_frame` in one `sessionId`; it does not
+predict from the first 30 incoming frames. Android must send a final
+`session_end` message with the same `sessionId` after an utterance ends. The
+service resamples that complete utterance to the model's 30-frame input and
+then performs one inference. This matches the training pipeline, which also
+resamples each complete 3- or 4-second recording to 30 frames.
+
+```json
+{"type":"session_end","sessionId":"<uuid>","callId":"<uuid>","timestampMs":1720000000000}
+```
+
+Each received frame returns a `collecting` status. A completed session returns
+one `prediction` when confidence passes the model threshold and the result is
+not `NO_SIGN`; otherwise it returns `completed_no_prediction`. Prediction and
+status responses include `sessionId` and `callId` so Spring can retain the
+sender mapping and publish a correlated `SUBTITLE`. Reusing a completed
+`sessionId` returns `UNKNOWN_SESSION` and never produces a duplicate result.
 
 Operational limits are configurable without code changes:
 

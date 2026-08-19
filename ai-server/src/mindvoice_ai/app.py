@@ -15,9 +15,10 @@ from .contracts import (
     ErrorMessage,
     LandmarkFrame,
     PredictionMessage,
+    SessionEnd,
 )
+from .dataset.sequences import resample_features
 from .inference.predictor import KerasPredictor, Predictor
-from .inference.stability import PredictionStabilizer
 from .session import SessionStore
 from .settings import SEQUENCE_LENGTH
 
@@ -25,6 +26,7 @@ MODEL_DIR_ENV = "MINDVOICE_MODEL_DIR"
 INFERENCE_TIMEOUT_ENV = "MINDVOICE_INFERENCE_TIMEOUT_SECONDS"
 MAX_CONCURRENCY_ENV = "MINDVOICE_MAX_CONCURRENT_INFERENCES"
 SESSION_TTL_ENV = "MINDVOICE_SESSION_TTL_SECONDS"
+MIN_SESSION_FRAMES = 3
 
 
 async def _predict_with_limits(
@@ -124,31 +126,65 @@ def create_app(
                     )
                     await websocket.send_json(response.model_dump(mode="json"))
                     continue
+                message_type = payload.get("type") if isinstance(payload, dict) else None
                 try:
-                    frame = LandmarkFrame.model_validate(payload)
-                except ValidationError as error:
+                    if message_type == "landmark_frame":
+                        message = LandmarkFrame.model_validate(payload)
+                    elif message_type == "session_end":
+                        message = SessionEnd.model_validate(payload)
+                    else:
+                        raise ValueError("type must be landmark_frame or session_end")
+                except (ValidationError, ValueError) as error:
+                    detail = (
+                        error.errors(include_url=False)[0]["msg"]
+                        if isinstance(error, ValidationError)
+                        else str(error)
+                    )
                     response = ErrorMessage(
-                        code="INVALID_LANDMARK_FRAME",
-                        message=error.errors(include_url=False)[0]["msg"],
+                        code="INVALID_INFERENCE_MESSAGE",
+                        message=detail,
                     )
                     await websocket.send_json(response.model_dump(mode="json"))
                     continue
 
-                active_session_id = frame.sessionId
-                buffer, accepted = sessions.append(frame)
-                if not accepted:
-                    response = ErrorMessage(
-                        code="OUT_OF_ORDER_FRAME",
-                        message="sequence must be greater than the last accepted sequence",
-                    )
-                    await websocket.send_json(response.model_dump(mode="json"))
-                    continue
-
-                if not buffer.ready:
+                active_session_id = message.sessionId
+                if isinstance(message, LandmarkFrame):
+                    buffer, accepted = sessions.append(message)
+                    if not accepted:
+                        response = ErrorMessage(
+                            code="OUT_OF_ORDER_FRAME",
+                            message="sequence must be greater than the last accepted sequence",
+                            sessionId=message.sessionId,
+                            callId=message.callId,
+                        )
+                        await websocket.send_json(response.model_dump(mode="json"))
+                        continue
                     response = BufferStatus(
-                        status="warming_up",
+                        status="collecting",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
                         bufferedFrames=len(buffer.frames),
                         requiredFrames=SEQUENCE_LENGTH,
+                    )
+                    await websocket.send_json(response.model_dump(mode="json"))
+                    continue
+
+                buffer = sessions.pop(message.sessionId)
+                if buffer is None:
+                    response = ErrorMessage(
+                        code="UNKNOWN_SESSION",
+                        message="session_end received without an active session",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
+                    )
+                    await websocket.send_json(response.model_dump(mode="json"))
+                    continue
+                if len(buffer.frames) < MIN_SESSION_FRAMES:
+                    response = ErrorMessage(
+                        code="INSUFFICIENT_SESSION_FRAMES",
+                        message=f"session must contain at least {MIN_SESSION_FRAMES} frames",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
                     )
                     await websocket.send_json(response.model_dump(mode="json"))
                     continue
@@ -157,33 +193,31 @@ def create_app(
                 if active_predictor is None:
                     response = BufferStatus(
                         status="model_unavailable",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
                         bufferedFrames=len(buffer.frames),
                         requiredFrames=SEQUENCE_LENGTH,
                     )
                     await websocket.send_json(response.model_dump(mode="json"))
                     continue
 
-                if buffer.stabilizer is None:
-                    buffer.stabilizer = PredictionStabilizer(
-                        confidence_threshold=active_predictor.metadata.confidenceThreshold,
-                        stable_window_count=active_predictor.metadata.stableWindowCount,
-                        no_sign_stable_key=active_predictor.metadata.noSignStableKey,
-                    )
                 try:
-                    window = np.asarray(
+                    features = np.asarray(
                         [item.features for item in buffer.frames], dtype=np.float32
                     )
+                    window = resample_features(features)
                     prediction = await _predict_with_limits(
                         active_predictor,
                         window,
                         inference_slots,
                         inference_timeout_seconds,
                     )
-                    stable_prediction = buffer.stabilizer.observe(prediction)
                 except TimeoutError:
                     response = ErrorMessage(
                         code="INFERENCE_TIMEOUT",
                         message="model inference exceeded the configured timeout",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
                     )
                     await websocket.send_json(response.model_dump(mode="json"))
                     continue
@@ -191,13 +225,20 @@ def create_app(
                     response = ErrorMessage(
                         code="INFERENCE_FAILED",
                         message=f"{type(error).__name__}: {error}",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
                     )
                     await websocket.send_json(response.model_dump(mode="json"))
                     continue
 
-                if stable_prediction is None:
+                if (
+                    prediction.confidence < active_predictor.metadata.confidenceThreshold
+                    or prediction.stable_key == active_predictor.metadata.noSignStableKey
+                ):
                     response = BufferStatus(
-                        status="analyzing",
+                        status="completed_no_prediction",
+                        sessionId=message.sessionId,
+                        callId=message.callId,
                         bufferedFrames=len(buffer.frames),
                         requiredFrames=SEQUENCE_LENGTH,
                     )
@@ -205,11 +246,11 @@ def create_app(
                     first_frame = buffer.frames[0]
                     last_frame = buffer.frames[-1]
                     response = PredictionMessage(
-                        sessionId=last_frame.sessionId,
-                        callId=last_frame.callId,
-                        classId=stable_prediction.class_id,
-                        label=stable_prediction.label,
-                        confidence=stable_prediction.confidence,
+                        sessionId=message.sessionId,
+                        callId=message.callId,
+                        classId=prediction.class_id,
+                        label=prediction.label,
+                        confidence=prediction.confidence,
                         startTimeMs=first_frame.timestampMs,
                         endTimeMs=last_frame.timestampMs,
                         modelVersion=active_predictor.metadata.modelVersion,

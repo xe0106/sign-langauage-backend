@@ -42,6 +42,17 @@ async def replay(url: str, frames: list[dict[str, Any]], speed: float) -> list[d
             responses.append(response)
             print(json.dumps({"sentSequence": frame["sequence"], "response": response}, ensure_ascii=False))
             previous_timestamp = frame["timestampMs"]
+        session_end = {
+            "type": "session_end",
+            "sessionId": frames[-1]["sessionId"],
+            "timestampMs": frames[-1]["timestampMs"],
+        }
+        if frames[-1].get("callId") is not None:
+            session_end["callId"] = frames[-1]["callId"]
+        await websocket.send(json.dumps(session_end, ensure_ascii=False))
+        response = json.loads(await websocket.recv())
+        responses.append(response)
+        print(json.dumps({"sentType": "session_end", "response": response}, ensure_ascii=False))
     return responses
 
 
@@ -70,6 +81,7 @@ def main() -> None:
         json.dumps(
             {
                 "sentFrames": len(frames),
+                "sentSessionEnd": True,
                 "predictionResponses": prediction_count,
                 "errorResponses": error_count,
             },

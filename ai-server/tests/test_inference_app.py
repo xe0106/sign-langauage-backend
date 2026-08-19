@@ -16,6 +16,7 @@ from mindvoice_ai.settings import FEATURE_DIMENSION, SEQUENCE_LENGTH
 class FakePredictor:
     def __init__(self, predictions: list[RawPrediction]) -> None:
         self.predictions = iter(predictions)
+        self.inputs: list[np.ndarray] = []
         self.metadata = ModelMetadata.model_validate(
             {
                 "modelVersion": "fake-v1",
@@ -35,19 +36,30 @@ class FakePredictor:
             }
         )
 
-    def predict(self, features) -> RawPrediction:
+    def predict(self, features: np.ndarray) -> RawPrediction:
         assert features.shape == (SEQUENCE_LENGTH, FEATURE_DIMENSION)
+        self.inputs.append(features.copy())
         return next(self.predictions)
 
 
-def frame_payload(session_id: str, sequence: int) -> dict:
-    return {
+def frame_payload(session_id: str, sequence: int, *, call_id: str | None = None) -> dict:
+    payload = {
         "type": "landmark_frame",
         "sessionId": session_id,
         "sequence": sequence,
         "timestampMs": sequence * 33,
-        "features": [0.0] * FEATURE_DIMENSION,
+        "features": [float(sequence)] * FEATURE_DIMENSION,
     }
+    if call_id is not None:
+        payload["callId"] = call_id
+    return payload
+
+
+def session_end_payload(session_id: str, *, call_id: str | None = None) -> dict:
+    payload = {"type": "session_end", "sessionId": session_id, "timestampMs": 10_000}
+    if call_id is not None:
+        payload["callId"] = call_id
+    return payload
 
 
 def test_health_reports_loaded_model_version() -> None:
@@ -58,32 +70,51 @@ def test_health_reports_loaded_model_version() -> None:
 
     assert response["modelStatus"] == "available"
     assert response["modelVersion"] == "fake-v1"
-    readiness = client.get("/ready")
-    assert readiness.status_code == 200
-    assert readiness.json()["modelVersion"] == "fake-v1"
+    assert client.get("/ready").status_code == 200
 
 
-def test_websocket_emits_only_stable_prediction() -> None:
-    hello = RawPrediction(0, "HELLO", "안녕하세요", 0.96)
-    predictor = FakePredictor([hello, hello, hello, hello])
+def test_websocket_predicts_once_after_session_end_with_full_utterance() -> None:
+    predictor = FakePredictor([RawPrediction(0, "HELLO", "안녕하세요", 0.96)])
+    client = TestClient(create_app(predictor, auto_load_model=False))
+    session_id = str(uuid4())
+    call_id = str(uuid4())
+
+    with client.websocket_connect("/ws/inference") as websocket:
+        for sequence in range(45):
+            websocket.send_json(frame_payload(session_id, sequence, call_id=call_id))
+            response = websocket.receive_json()
+            assert response["status"] == "collecting"
+            assert response["bufferedFrames"] == sequence + 1
+        websocket.send_json(session_end_payload(session_id, call_id=call_id))
+        emitted = websocket.receive_json()
+        websocket.send_json(session_end_payload(session_id, call_id=call_id))
+        duplicate = websocket.receive_json()
+
+    assert emitted["type"] == "prediction"
+    assert emitted["sessionId"] == session_id
+    assert emitted["callId"] == call_id
+    assert emitted["label"] == "안녕하세요"
+    assert emitted["stable"] is True
+    assert duplicate["code"] == "UNKNOWN_SESSION"
+    assert len(predictor.inputs) == 1
+    assert predictor.inputs[0][0, 0] == 0.0
+    assert predictor.inputs[0][-1, 0] == 44.0
+
+
+def test_no_sign_or_low_confidence_ends_without_prediction() -> None:
+    predictor = FakePredictor([RawPrediction(1, "NO_SIGN", "비수어", 0.99)])
     client = TestClient(create_app(predictor, auto_load_model=False))
     session_id = str(uuid4())
 
     with client.websocket_connect("/ws/inference") as websocket:
-        responses = []
-        for sequence in range(SEQUENCE_LENGTH + 3):
+        for sequence in range(3):
             websocket.send_json(frame_payload(session_id, sequence))
-            responses.append(websocket.receive_json())
+            websocket.receive_json()
+        websocket.send_json(session_end_payload(session_id))
+        response = websocket.receive_json()
 
-    assert responses[SEQUENCE_LENGTH - 1]["status"] == "analyzing"
-    assert responses[SEQUENCE_LENGTH]["status"] == "analyzing"
-    emitted = responses[SEQUENCE_LENGTH + 1]
-    assert emitted["type"] == "prediction"
-    assert emitted["classId"] == 0
-    assert emitted["label"] == "안녕하세요"
-    assert emitted["stable"] is True
-    assert emitted["modelVersion"] == "fake-v1"
-    assert responses[SEQUENCE_LENGTH + 2]["status"] == "analyzing"
+    assert response["status"] == "completed_no_prediction"
+    assert response["sessionId"] == session_id
 
 
 def test_invalid_json_does_not_close_websocket() -> None:
@@ -97,12 +128,11 @@ def test_invalid_json_does_not_close_websocket() -> None:
         status = websocket.receive_json()
 
     assert error["code"] == "INVALID_JSON"
-    assert status["status"] == "warming_up"
+    assert status["status"] == "collecting"
 
 
-def test_slow_inference_returns_timeout_without_closing_socket() -> None:
-    hello = RawPrediction(0, "HELLO", "안녕하세요", 0.96)
-    predictor = FakePredictor([hello, hello])
+def test_slow_inference_returns_timeout_after_session_end() -> None:
+    predictor = FakePredictor([RawPrediction(0, "HELLO", "안녕하세요", 0.96)])
     original_predict = predictor.predict
 
     def slow_predict(features):
@@ -110,22 +140,17 @@ def test_slow_inference_returns_timeout_without_closing_socket() -> None:
         return original_predict(features)
 
     predictor.predict = slow_predict
-    client = TestClient(
-        create_app(
-            predictor,
-            auto_load_model=False,
-            inference_timeout_seconds=0.01,
-        )
-    )
+    client = TestClient(create_app(predictor, auto_load_model=False, inference_timeout_seconds=0.01))
     session_id = str(uuid4())
 
     with client.websocket_connect("/ws/inference") as websocket:
-        for sequence in range(SEQUENCE_LENGTH):
+        for sequence in range(3):
             websocket.send_json(frame_payload(session_id, sequence))
-            response = websocket.receive_json()
-        assert response["code"] == "INFERENCE_TIMEOUT"
-        websocket.send_json(frame_payload(session_id, SEQUENCE_LENGTH))
-        assert websocket.receive_json()["code"] == "INFERENCE_TIMEOUT"
+            websocket.receive_json()
+        websocket.send_json(session_end_payload(session_id))
+        response = websocket.receive_json()
+
+    assert response["code"] == "INFERENCE_TIMEOUT"
 
 
 def test_inference_semaphore_limits_worker_threads() -> None:

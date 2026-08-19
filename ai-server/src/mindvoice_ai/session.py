@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from collections import deque
 from dataclasses import dataclass, field
 import time
 from typing import Protocol
 from uuid import UUID
-
-from .settings import SEQUENCE_LENGTH
-
 
 class SequencedFrame(Protocol):
     sessionId: UUID
@@ -16,11 +12,10 @@ class SequencedFrame(Protocol):
 
 @dataclass
 class SessionBuffer:
-    frames: deque[SequencedFrame] = field(
-        default_factory=lambda: deque(maxlen=SEQUENCE_LENGTH)
-    )
+    # Keep the whole utterance. It is resampled to the model's fixed length only
+    # after the Android client explicitly ends this session.
+    frames: list[SequencedFrame] = field(default_factory=list)
     last_sequence: int = -1
-    stabilizer: object | None = None
     last_activity: float = 0.0
 
     def append(self, frame: SequencedFrame) -> bool:
@@ -29,11 +24,6 @@ class SessionBuffer:
         self.frames.append(frame)
         self.last_sequence = frame.sequence
         return True
-
-    @property
-    def ready(self) -> bool:
-        return len(self.frames) == SEQUENCE_LENGTH
-
 
 class SessionStore:
     def __init__(self, *, ttl_seconds: float = 300.0, clock=time.monotonic) -> None:
@@ -54,6 +44,10 @@ class SessionStore:
 
     def remove(self, session_id: UUID) -> None:
         self._sessions.pop(session_id, None)
+
+    def pop(self, session_id: UUID) -> SessionBuffer | None:
+        """Finish a session so a UUID cannot produce a second prediction."""
+        return self._sessions.pop(session_id, None)
 
     def remove_stale(self, *, now: float | None = None) -> int:
         current = self._clock() if now is None else now

@@ -32,20 +32,22 @@ def test_readiness_fails_without_model() -> None:
     assert response.status_code == 503
 
 
-def test_websocket_warms_up_then_reports_missing_model() -> None:
+def test_websocket_reports_missing_model_when_a_session_ends() -> None:
     session_id = str(uuid4())
 
     with client.websocket_connect("/ws/inference") as websocket:
-        for sequence in range(SEQUENCE_LENGTH):
+        for sequence in range(3):
             websocket.send_json(frame_payload(session_id, sequence))
-            response = websocket.receive_json()
+            websocket.receive_json()
+        websocket.send_json(
+            {"type": "session_end", "sessionId": session_id, "timestampMs": 100}
+        )
+        response = websocket.receive_json()
 
-        assert response == {
-            "type": "status",
-            "status": "model_unavailable",
-            "bufferedFrames": SEQUENCE_LENGTH,
-            "requiredFrames": SEQUENCE_LENGTH,
-        }
+    assert response["type"] == "status"
+    assert response["status"] == "model_unavailable"
+    assert response["bufferedFrames"] == 3
+    assert response["sessionId"] == session_id
 
 
 def test_websocket_rejects_wrong_feature_dimension() -> None:
@@ -57,4 +59,4 @@ def test_websocket_rejects_wrong_feature_dimension() -> None:
         response = websocket.receive_json()
 
     assert response["type"] == "error"
-    assert response["code"] == "INVALID_LANDMARK_FRAME"
+    assert response["code"] == "INVALID_INFERENCE_MESSAGE"

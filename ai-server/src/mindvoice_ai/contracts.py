@@ -27,9 +27,22 @@ class LandmarkFrame(BaseModel):
         return values
 
 
+class SessionEnd(BaseModel):
+    """Marks the end of one sign utterance and requests final inference."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["session_end"]
+    sessionId: UUID
+    callId: UUID | None = None
+    timestampMs: int = Field(ge=0)
+
+
 class BufferStatus(BaseModel):
     type: Literal["status"] = "status"
-    status: Literal["warming_up", "analyzing", "model_unavailable"]
+    status: Literal["collecting", "analyzing", "completed_no_prediction", "model_unavailable"]
+    sessionId: UUID
+    callId: UUID | None = None
     bufferedFrames: int = Field(ge=0)
     requiredFrames: int = SEQUENCE_LENGTH
 
@@ -38,6 +51,8 @@ class ErrorMessage(BaseModel):
     type: Literal["error"] = "error"
     code: str
     message: str
+    sessionId: UUID | None = None
+    callId: UUID | None = None
 
 
 class PredictionMessage(BaseModel):

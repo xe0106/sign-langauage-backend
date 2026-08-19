@@ -21,3 +21,8 @@ These additional references should also help you:
 ### API 명세서 링크
 
 https://baejeonghwan777-9831769.postman.co/workspace/bae's-Workspace~d09fbbed-29ac-4503-8cc5-4a843a28f6cb/folder/54733240-b1057928-6b6a-41d4-9241-7b3f2b1d147d?action=share&creator=54733240&ctx=documentation
+
+### 설계 다이어그램
+
+<img width="1400" height="1160" alt="스크린샷 2026-08-19 105140" src="https://github.com/user-attachments/assets/3dabb2c4-1f5a-4b39-8bac-a7479d30fb3d" />
+

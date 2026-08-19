@@ -23,12 +23,12 @@ import java.util.List;
 public class AiFeatureMessage {
 
     @Builder.Default
-    private String type = "landmark_frame"; // AI 서버 필수 필드
+    private String type = "landmark_frame"; // landmark_frame 또는 session_end
 
     private String sessionId;      // 사용자별 UUID
     private String callId;         // 통화 UUID
     private Long senderId;         // 자막 송신자 ID (Android -> Spring 수신용, AI 전송 시 payloadMap에서 제외됨)
-    private Long sequence;         // 프레임 시퀀스 (0부터 증가)
-    private Long timestampMs;      // 타임스탬프 (ms)
-    private List<Float> features;  // 258개의 Float 랜드마크 배열
+    private Long sequence;         // landmark_frame에서만 사용: 0부터 증가
+    private Long timestampMs;      // Unix epoch millisecond
+    private List<Float> features;  // landmark_frame에서만 사용: 258개 Float 배열
 }

@@ -7,7 +7,7 @@ import numpy as np
 
 from fastapi.testclient import TestClient
 
-from mindvoice_ai.app import _predict_with_limits, create_app, mirror_input_x_coordinates
+from mindvoice_ai.app import _predict_with_limits, create_app
 from mindvoice_ai.inference.package import ModelMetadata
 from mindvoice_ai.inference.predictor import RawPrediction
 from mindvoice_ai.settings import FEATURE_DIMENSION, SEQUENCE_LENGTH
@@ -71,22 +71,6 @@ def test_health_reports_loaded_model_version() -> None:
     assert response["modelStatus"] == "available"
     assert response["modelVersion"] == "fake-v1"
     assert client.get("/ready").status_code == 200
-
-
-def test_mirror_input_x_coordinates_only_changes_x_components() -> None:
-    features = np.arange(2 * FEATURE_DIMENSION, dtype=np.float32).reshape(2, FEATURE_DIMENSION)
-
-    mirrored = mirror_input_x_coordinates(features)
-
-    for offset, stride, count in (
-        (0, 4, 33),
-        (132, 3, 21),
-        (195, 3, 21),
-    ):
-        x_indices = offset + np.arange(count) * stride
-        assert np.array_equal(mirrored[:, x_indices], -features[:, x_indices])
-    unchanged = [1, 2, 3, 133, 134, 196, 197]
-    assert np.array_equal(mirrored[:, unchanged], features[:, unchanged])
 
 
 def test_websocket_predicts_once_after_session_end_with_full_utterance() -> None:

@@ -9,7 +9,6 @@ services:
       MINDVOICE_INFERENCE_TIMEOUT_SECONDS: "1.0"
       MINDVOICE_MAX_CONCURRENT_INFERENCES: "2"
       MINDVOICE_SESSION_TTL_SECONDS: "300"
-      MINDVOICE_MIRROR_INPUT_X: ${MINDVOICE_MIRROR_INPUT_X:-false}
     volumes:
       - ${MINDVOICE_MODEL_PACKAGE:-./artifacts/ksl-word-v0.1.0}:/models/current:ro
     restart: unless-stopped

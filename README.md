@@ -16,7 +16,7 @@ https://baejeonghwan777-9831769.postman.co/workspace/bae's-Workspace~d09fbbed-29
 
 ### 설계 다이어그램
 
-<img width="2324" height="603" alt="마음의 소리 drawio" src="https://github.com/user-attachments/assets/0d9f02b3-5fc5-4a34-a658-7006bd048904" />
+<img width="2404" height="773" alt="마음의 소리 drawio" src="https://github.com/user-attachments/assets/70f28a8d-bc45-463d-9530-6b4db81f3976" />
 
 ### 클래스 구조
 

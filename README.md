@@ -8,9 +8,11 @@
 
 <img width="1522" height="1285" alt="스크린샷 2026-08-19 004548" src="https://github.com/user-attachments/assets/88fdf510-826f-4937-bf42-2cd6e97332fd" />
 
-### API 명세서 링크
+### API 명세서 링크 및 파일
 
 https://baejeonghwan777-9831769.postman.co/workspace/bae's-Workspace~d09fbbed-29ac-4503-8cc5-4a843a28f6cb/folder/54733240-b1057928-6b6a-41d4-9241-7b3f2b1d147d?action=share&creator=54733240&ctx=documentation
+
+[마음의 소리 API 전체 상세 명세서.pdf](https://github.com/user-attachments/files/31246541/API.pdf)
 
 ### 설계 다이어그램
 

@@ -6,7 +6,7 @@
 
 ### ERD 설계 사진
 
-<img width="1522" height="1285" alt="스크린샷 2026-08-19 004548" src="https://github.com/user-attachments/assets/88fdf510-826f-4937-bf42-2cd6e97332fd" />
+<img width="1534" height="1048" alt="스크린샷 2026-08-20 121313" src="https://github.com/user-attachments/assets/5a0e2538-5e55-4b0f-b2f3-7ccb7ba8598b" />
 
 ### API 명세서 링크 및 파일
 

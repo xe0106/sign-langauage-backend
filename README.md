@@ -14,6 +14,10 @@ https://baejeonghwan777-9831769.postman.co/workspace/bae's-Workspace~d09fbbed-29
 
 ### 설계 다이어그램
 
+<img width="2324" height="603" alt="마음의 소리 drawio" src="https://github.com/user-attachments/assets/bd129451-172a-4348-bdb7-f612a65ea672" />
+
+### 클래스 구조
+
 화살표는 상속을 의미합니다.
 
 <img width="1400" height="1160" alt="스크린샷 2026-08-19 105140" src="https://github.com/user-attachments/assets/3dabb2c4-1f5a-4b39-8bac-a7479d30fb3d" />
